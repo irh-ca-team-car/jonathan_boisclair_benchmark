@@ -1,0 +1,4 @@
+log/COLCON_IGNORE
+*.pyc
+log
+.vscode
