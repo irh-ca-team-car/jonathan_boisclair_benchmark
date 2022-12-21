@@ -4,7 +4,7 @@ import interface
 import torch
 import time
 import cv2
-
+import torchvision
 
 def show(t: torch.Tensor,wait: bool = False):
     t = torch.nn.functional.interpolate(t, scale_factor=1)
@@ -26,7 +26,7 @@ def show(t: torch.Tensor,wait: bool = False):
         cv2.waitKey(1)
 
 
-sample  = Sample()
+sample  = Sample.Example()
 det = Detection()
 box2d = Box2d()
 box2d.x=150
@@ -38,6 +38,7 @@ det.boxes2d.append(box2d)
 sample.setTarget(det)
 
 for i,(name,det) in enumerate(Detector.getAllRegisteredDetectors().items()):
+    break
     print(name,det)
     model :Detector = det().to("cuda:0")
 
@@ -59,3 +60,27 @@ for i,(name,det) in enumerate(Detector.getAllRegisteredDetectors().items()):
     #detections = model.forward([sample,sample])
     #print([x.filter(0.5) for x in detections])
     del model
+
+import torchvision.transforms as transforms
+import pycocotools.coco
+
+dataDir = 'interface/datasets/coco'
+dataType = 'val2014'
+annFile = '%s/annotations/instances_%s.json' % (dataDir, dataType)
+
+coco = pycocotools.coco.COCO(annFile)
+coco.download("interface/datasets/coco/imgs",coco.getImgIds(catIds=[3]))
+
+from interface.datasets.Coco import CocoDetection
+dataset = CocoDetection("interface/datasets/coco/imgs",annFile)
+
+for cocoSamp in dataset:
+    for i,(name,det) in enumerate(Detector.getAllRegisteredDetectors().items()):
+        model :Detector = det().to("cuda:0")
+
+        detections = model.forward(cocoSamp)
+        show(detections.filter(0.5).onImage(cocoSamp), False)
+
+        cv2.waitKey(33)
+        del model
+

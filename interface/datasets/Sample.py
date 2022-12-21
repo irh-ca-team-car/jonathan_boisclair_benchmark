@@ -1,23 +1,40 @@
 import torch
 import torchvision
 import torch.nn as nn
-
+import numpy as np
 class Sample:
     img : torch.Tensor
+    _thermal : torch.Tensor
+    _lidar : torch.Tensor
+    def Example():
+        s = Sample()
+        img = torchvision.io.read_image("data/1.jpg", torchvision.io.ImageReadMode.UNCHANGED).float()/255.0
+        img=torch.nn.functional.interpolate(img.unsqueeze(0) ,size=(640,640)).squeeze(0)
+        s.setImage(img)
+        return s
     def __init__(self) -> None:
-        self.img = torchvision.io.read_image("data/1.jpg", torchvision.io.ImageReadMode.RGB).float()/255.0
-        self.img=torch.nn.functional.interpolate(self.img.unsqueeze(0) ,size=(640,640)).squeeze(0)
+        
         self.detection = None
+        self._img = None
+        self._thermal = None
+        self._lidar = None
         #self.img = torch.zeros(3,640,640)
         pass
+    def setImage(self,img):
+        if isinstance(img,np.ndarray):
+            self.img = torch.from_numpy(img)
+
+        if isinstance(img,torch.Tensor):
+            self.img=img
+        pass
     def hasImage(self) -> bool:
-        return True
+        return self.img is not None
     def isRgb(self) -> bool:
-        return True
+        return self.hasImage() and self.img.shape[0]==3
     def isArgb(self) -> bool:
-        return False
+        return self.hasImage() and self.img.shape[0]==4
     def isGray(self) -> bool:
-        return False
+        return self.hasImage() and self.img.shape[0]==1
     def getImage(self) -> torch.Tensor:
         return self.img
     def getRGB(self) -> torch.Tensor:
@@ -45,16 +62,16 @@ class Sample:
             return torch.mean(img,0).unsqueeze(0)
 
     def hasLidar(self) -> bool:
-        return False
+        return self._lidar is not None
     def getLidar(self) -> torch.Tensor:
         if self.hasLidar():
-            return torch.zeros(300000,5)
+            return self._lidar
         return None
     def hasThermal(self) -> bool:
-        return False
+        return self._thermal is not None
     def getThermal(self) -> torch.Tensor:
         if self.hasThermal():
-            return torch.zeros(1,640,640)
+            return self._thermal
         return None
     def toTorchVisionTarget(self, device):
         if self.detection is not None:
@@ -62,3 +79,4 @@ class Sample:
         return None
     def setTarget(self,detection):
         self.detection = detection
+    

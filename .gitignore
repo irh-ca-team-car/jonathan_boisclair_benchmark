@@ -2,3 +2,7 @@ log/COLCON_IGNORE
 *.pyc
 log
 .vscode
+coco/imgs
+imgs
+*.zip
+annotations
