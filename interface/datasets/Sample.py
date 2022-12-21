@@ -1,7 +1,14 @@
 import torch
+import torchvision
 import torch.nn as nn
+
 class Sample:
+    img : torch.Tensor
     def __init__(self) -> None:
+        self.img = torchvision.io.read_image("data/1.jpg", torchvision.io.ImageReadMode.RGB).float()/255.0
+        self.img=torch.nn.functional.interpolate(self.img.unsqueeze(0) ,size=(640,640)).squeeze(0)
+        self.detection = None
+        #self.img = torch.zeros(3,640,640)
         pass
     def hasImage(self) -> bool:
         return True
@@ -12,7 +19,7 @@ class Sample:
     def isGray(self) -> bool:
         return False
     def getImage(self) -> torch.Tensor:
-        return torch.zeros(3,640,640)
+        return self.img
     def getRGB(self) -> torch.Tensor:
         if self.isGray():
             img = self.getImage()
@@ -38,10 +45,20 @@ class Sample:
             return torch.mean(img,0).unsqueeze(0)
 
     def hasLidar(self) -> bool:
-        return True
+        return False
     def getLidar(self) -> torch.Tensor:
-        return torch.zeros(300000,5)
+        if self.hasLidar():
+            return torch.zeros(300000,5)
+        return None
     def hasThermal(self) -> bool:
-        return True
+        return False
     def getThermal(self) -> torch.Tensor:
-        return torch.zeros(1,640,640)
+        if self.hasThermal():
+            return torch.zeros(1,640,640)
+        return None
+    def toTorchVisionTarget(self, device):
+        if self.detection is not None:
+            return self.detection.toTorchVisionTarget(device)
+        return None
+    def setTarget(self,detection):
+        self.detection = detection

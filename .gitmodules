@@ -1,0 +1,3 @@
+[submodule "EffDet"]
+	path = EffDet
+	url = git@github.com:boiscljo/Yet-Another-EfficientDet-Pytorch.git
