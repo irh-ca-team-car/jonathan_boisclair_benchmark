@@ -170,7 +170,11 @@ class Detection:
         newVal.boxes2d = [x for x in self.boxes2d if x.cf > th]
         newVal.boxes3d = [x for x in self.boxes3d if x.cf > th]
         return newVal
-
+    def c(self,c):
+        d = Detection()
+        d.boxes2d = [x for x in self.boxes2d if int(x.c) == int(c)]
+        d.boxes3d = [x for x in self.boxes3d if int(x.c) == int(c)]
+        return d
     def onImage(self, sample: Sample):
         img = (sample.getRGB()*255.0).byte()
         target = self.toTorchVisionTarget("cpu")
@@ -185,7 +189,10 @@ class Detection:
         for box in self.boxes2d:
             boxes.append([box.x, box.y, box.x+box.w, box.y+box.h])
             labels.append(int(box.c))
-        return {'boxes': torch.tensor(boxes, dtype=torch.int64).to(device), 'labels': torch.tensor(labels, dtype=torch.int64).to(device)}
+        t= torch.tensor(boxes, dtype=torch.int64).to(device)
+        if(len(boxes)==0):
+            t = t.view(0,4)
+        return {'boxes': t, 'labels': torch.tensor(labels, dtype=torch.int64).to(device)}
 
     def __str__(self) -> str:
         return "{ type:Detection, boxes2d:"+str(self.boxes2d)+", boxes3d:"+str(self.boxes3d) + "}"
