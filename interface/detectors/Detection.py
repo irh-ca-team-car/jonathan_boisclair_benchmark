@@ -1,9 +1,8 @@
-from typing import List
+from typing import List, Tuple
 import torch
 import torch.nn as nn
 import torchvision
 from ..datasets.Sample import Sample
-
 
 class Box2d:
     x: float
@@ -19,6 +18,18 @@ class Box2d:
         self.c = 0
         self.cf = 0
         self.cn = ""
+    def scale(self,x=1.0,y=1.0):
+        newBox = Box2d()
+        newBox.x = self.x*x
+        newBox.y = self.y*y
+        newBox.w = self.w*x
+        newBox.h = self.h*y
+        newBox.c = self.c
+        newBox.cn = self.cn
+        newBox.cf = self.cf
+        return newBox
+
+
 
     def __str__(self) -> str:
         return f"Box2d[x:{self.x},y:{self.y},w:{self.w},h:{self.h},class:{self.c},confidence:{self.cf}]"
@@ -37,6 +48,18 @@ class Box3d:
     c: float
     cf: float
     cn: str
+    def scale(self,x=1.0,y=1.0, z=1.0):
+        newBox = Box3d()
+        newBox.x = self.x*x
+        newBox.y = self.y*y
+        newBox.z = self.z*z
+        newBox.w = self.w*x
+        newBox.h = self.h*y
+        newBox.d = self.d*y
+        newBox.c = self.c
+        newBox.cn = self.cn
+        newBox.cf = self.cf
+        return newBox
 
     def __init__(self) -> None:
         self.x = self.y = self.w = self.h = self.z = self.d = 0
@@ -51,88 +74,6 @@ class Box3d:
         return self.__str__()
 
 
-mscoco = {0: u'__background__',
- 1: u'person',
- 2: u'bicycle',
- 3: u'car',
- 4: u'motorcycle',
- 5: u'airplane',
- 6: u'bus',
- 7: u'train',
- 8: u'truck',
- 9: u'boat',
- 10: u'traffic light',
- 11: u'fire hydrant',
- 12: u'stop sign',
- 13: u'parking meter',
- 14: u'bench',
- 15: u'bird',
- 16: u'cat',
- 17: u'dog',
- 18: u'horse',
- 19: u'sheep',
- 20: u'cow',
- 21: u'elephant',
- 22: u'bear',
- 23: u'zebra',
- 24: u'giraffe',
- 25: u'backpack',
- 26: u'umbrella',
- 27: u'handbag',
- 28: u'tie',
- 29: u'suitcase',
- 30: u'frisbee',
- 31: u'skis',
- 32: u'snowboard',
- 33: u'sports ball',
- 34: u'kite',
- 35: u'baseball bat',
- 36: u'baseball glove',
- 37: u'skateboard',
- 38: u'surfboard',
- 39: u'tennis racket',
- 40: u'bottle',
- 41: u'wine glass',
- 42: u'cup',
- 43: u'fork',
- 44: u'knife',
- 45: u'spoon',
- 46: u'bowl',
- 47: u'banana',
- 48: u'apple',
- 49: u'sandwich',
- 50: u'orange',
- 51: u'broccoli',
- 52: u'carrot',
- 53: u'hot dog',
- 54: u'pizza',
- 55: u'donut',
- 56: u'cake',
- 57: u'chair',
- 58: u'couch',
- 59: u'potted plant',
- 60: u'bed',
- 61: u'dining table',
- 62: u'toilet',
- 63: u'tv',
- 64: u'laptop',
- 65: u'mouse',
- 66: u'remote',
- 67: u'keyboard',
- 68: u'cell phone',
- 69: u'microwave',
- 70: u'oven',
- 71: u'toaster',
- 72: u'sink',
- 73: u'refrigerator',
- 74: u'book',
- 75: u'clock',
- 76: u'vase',
- 77: u'scissors',
- 78: u'teddy bear',
- 79: u'hair drier',
- 80: u'toothbrush'}
-
 class Detection:
     boxes2d: List[Box2d]
     boxes3d: List[Box3d]
@@ -141,8 +82,13 @@ class Detection:
         self.boxes2d = []
         self.boxes3d = []
         
+    def scale(self,x=1.0,y=1.0):
+        newDet = Detection()
+        newDet.boxes2d = [b.scale(x,y) for b in self.boxes2d]
+        newDet.boxes3d = list([b.scale() for b in self.boxes3d])
+        return newDet
 
-    def fromTorchVision(torchVisionResult):
+    def fromTorchVision(torchVisionResult, dataset=None):
         ret = []
         for res in torchVisionResult:
             det = Detection()
@@ -154,8 +100,9 @@ class Detection:
                 box.h = res["boxes"][b, 3].item()-res["boxes"][b, 1].item()
                 box.c = res["labels"][b].item()
                 box.cf = res["scores"][b].item()
-                if box.c in mscoco:
-                    box.cn = mscoco[box.c]
+                box.cn = str(box.c)#CocoDetection.getName(box.c)
+                if dataset is not None:
+                    box.cn = dataset.getName(box.c)
                 det.boxes2d.append(box)
             ret.append(det)
 
@@ -175,19 +122,42 @@ class Detection:
         d.boxes2d = [x for x in self.boxes2d if int(x.c) == int(c)]
         d.boxes3d = [x for x in self.boxes3d if int(x.c) == int(c)]
         return d
-    def onImage(self, sample: Sample):
-        img = (sample.getRGB()*255.0).byte()
+    def onImage(self, sample: Sample, colors:List[Tuple[int,int,int]]=None):
+        if isinstance(sample,Sample):
+            img = (sample.getRGB()*255.0).byte()
+        elif isinstance(sample,torch.Tensor):
+            img = sample
+        else :
+            raise Exception("Argument sample must be sample or tensor")
         target = self.toTorchVisionTarget("cpu")
         if len(self.boxes2d) > 0:
             labels = [b.cn for b in self.boxes2d]
-            img = torchvision.utils.draw_bounding_boxes(img,target["boxes"],labels, width=4)
+            if colors is not None:
+                colors = [c for c in colors]
+                i=0
+                while len(colors) < len(labels):
+                    colors.append(colors[i])
+                    i+=1
+                img = torchvision.utils.draw_bounding_boxes(img,target["boxes"],labels, width=4, colors=colors)
+                
+                pass
+            else:
+                img = torchvision.utils.draw_bounding_boxes(img,target["boxes"],labels, width=4)
         return img
 
     def toTorchVisionTarget(self, device):
         boxes = []
         labels = []
         for box in self.boxes2d:
+            if box.w<1:
+                box.w=2
+            if box.h<1:
+                box.h=2
             boxes.append([box.x, box.y, box.x+box.w, box.y+box.h])
+            if boxes[-1][2] <= boxes[-1][0]:
+                boxes[-1][2] = boxes[-1][0] +1
+            if boxes[-1][3] <= boxes[-1][1]:
+                boxes[-1][3] = boxes[-1][1] +1
             labels.append(int(box.c))
         t= torch.tensor(boxes, dtype=torch.int64).to(device)
         if(len(boxes)==0):

@@ -2,10 +2,17 @@ import torch
 import torchvision
 import torch.nn as nn
 import numpy as np
+class Size:
+    def __init__(self,w,h) -> None:
+        self.w=w
+        self.h=h
 class Sample:
     img : torch.Tensor
     _thermal : torch.Tensor
     _lidar : torch.Tensor
+    detection : None
+
+   
     def Example():
         s = Sample()
         img = torchvision.io.read_image("data/1.jpg", torchvision.io.ImageReadMode.UNCHANGED).float()/255.0
@@ -20,6 +27,45 @@ class Sample:
         self._lidar = None
         #self.img = torch.zeros(3,640,640)
         pass
+    def clone(self):
+        newSample = Sample()
+        if self.img is not None:
+            newSample.img = self.img.clone()
+        if self._thermal is not None:
+            newSample._thermal = self._thermal.clone()
+        if self._lidar is not None:
+            newSample._lidar = self._lidar.clone()
+        if self.detection is not None:
+            newSample.detection = self.detection.scale()
+        return newSample
+    def scale(self, x=1.0,y=None):
+        if isinstance(x, Size):
+            xFactor = x.w/self.img.shape[2]
+            yFactor = x.h/self.img.shape[1]
+        if y is None:
+            y = x
+        newSample = self
+        if self.img is not None:
+            img = newSample.img.unsqueeze(0)
+            if not isinstance(x, Size):
+                self.img=torch.nn.functional.interpolate(img,scale_factor=(y,x))[0]
+            else:
+                self.img=torch.nn.functional.interpolate(img,size=(x.h,x.w))[0]
+
+        if self._thermal is not None:
+            img = newSample._thermal.unsqueeze(0)
+            if not isinstance(x, Size):
+                self._thermal=torch.nn.functional.interpolate(img,scale_factor=(y,x))[0]
+            else:
+                self.img=torch.nn.functional.interpolate(img,size=(x.h,x.w))[0]
+        if self.detection is not None:
+            if not isinstance(x, Size):
+                newSample.detection = self.detection.scale(x,y)
+            else:
+                newSample.detection = self.detection.scale(xFactor,yFactor)
+
+        return newSample
+
     def setImage(self,img):
         if isinstance(img,np.ndarray):
             self.img = torch.from_numpy(img)

@@ -13,7 +13,10 @@ class Detector(nn.Module):
         self.support_batch = support_batch
         self.device = torch.device("cpu")
 
-    def forward(self, x:Sample, target=None) -> Detection:
+    def forward(self, x:Sample, target=None, dataset=None) -> Detection:
+        if dataset is None:
+            from ..datasets.Coco import CocoDetection
+            dataset = CocoDetection
         if not isinstance(x,Sample) and not isinstance(x,list):
             raise Exception("Argument is not a Sample")
         if isinstance(x,list):
@@ -21,26 +24,34 @@ class Detector(nn.Module):
                 if not isinstance(v,Sample):
                     raise Exception("Argument list contains non samples")
             if not self.support_batch:
-                return [self.forward(v) for v in x]
+                return [self.forward(v, dataset=dataset) for v in x]
             else:
                 if self.num_channel ==1 :
-                    return self._forward([v.getGray() for v in x],[v.getLidar() for v in x],[v.getThermal() for v in x],target)
+                    return self._forward([v.getGray() for v in x],[v.getLidar() for v in x],[v.getThermal() for v in x],target, dataset=dataset)
                 if self.num_channel ==3 :
-                    return self._forward([v.getRGB() for v in x],[v.getLidar() for v in x],[v.getThermal() for v in x],target)
+                    return self._forward([v.getRGB() for v in x],[v.getLidar() for v in x],[v.getThermal() for v in x],target, dataset=dataset)
                 if self.num_channel ==4 :
-                    return self._forward([v.getARGB() for v in x],[v.getLidar() for v in x],[v.getThermal() for v in x],target)
+                    return self._forward([v.getARGB() for v in x],[v.getLidar() for v in x],[v.getThermal() for v in x],target, dataset=dataset)
         
         if self.num_channel ==1 :
-            return self._forward(x.getGray(), x.getLidar(), x.getThermal(),target)
+            return self._forward(x.getGray(), x.getLidar(), x.getThermal(),target, dataset=dataset)
         if self.num_channel ==3 :
-            return self._forward(x.getRGB(), x.getLidar(), x.getThermal(),target)
+            return self._forward(x.getRGB(), x.getLidar(), x.getThermal(),target, dataset=dataset)
         if self.num_channel ==4 :
-            return self._forward(x.getARGB(), x.getLidar(), x.getThermal(),target)
+            return self._forward(x.getARGB(), x.getLidar(), x.getThermal(),target, dataset=dataset)
         return x
+    def adaptTo(self,dataset):
+        print("Adapting to ",dataset.getName())
+        return self
     def eval(self):
         pass
     def train(self):
         pass
+    def save(self,file):
+        torch.save(self.state_dict(),file)
+    def load(self,file):
+        state_dict= torch.load(file, map_location=self.device)
+        self.load_state_dict(state_dict, strict = False)
     def to(self,device:torch.device):
         super(Detector,self).to(device)
         self.device = device
@@ -59,15 +70,26 @@ class Detector(nn.Module):
 class GrayScaleDetector(Detector):
     def __init__(self):
         super(GrayScaleDetector,self).__init__(1,False)
-    def _forward(self, gray:torch.Tensor,lidar:torch.Tensor,thermal:torch.Tensor, target=None):
+    def _forward(self, gray:torch.Tensor,lidar:torch.Tensor,thermal:torch.Tensor, target=None, dataset=None):
         return Detection()
 
 class TorchVisionDetector(Detector):
-    def __init__(self, initiator,w):
+    def __init__(self, initiator,w, num_classes=None):
         super(TorchVisionDetector,self).__init__(3,True)
+        self.initiator = initiator
+        self.w=w
         self.model = initiator(weights=w)
         self.model.eval()
-    def _forward(self, rgb:torch.Tensor,lidar:torch.Tensor,thermal:torch.Tensor, target=None):
+        self.dataset = "MS-COCO"
+    def adaptTo(self,dataset):
+        if self.dataset != dataset.getName():
+            print("Torchvision model adapting to ",dataset.getName())
+            newModel = TorchVisionDetector(self.initiator,self.w, num_classes=len(dataset.classesList())+1 )
+            newModel.dataset = dataset.getName()
+            return newModel
+        else:
+            return self
+    def _forward(self, rgb:torch.Tensor,lidar:torch.Tensor,thermal:torch.Tensor, target=None, dataset=None):
         if isinstance(rgb,list):
             return self._forward(torch.cat([v.unsqueeze(0) for v in rgb],0), None,None, target)
         if len(rgb.shape)==3:
@@ -82,7 +104,7 @@ class TorchVisionDetector(Detector):
             loss_dict= self.model(rgb,target )
             return sum(loss for loss in loss_dict.values())
         torchvisionresult= self.model(rgb)
-        return Detection.fromTorchVision(torchvisionresult)
+        return Detection.fromTorchVision(torchvisionresult, dataset)
     def eval(self):
         self.model.eval()
     def train(self):
@@ -100,7 +122,7 @@ class TorchVisionDetector(Detector):
 
         losses= self.forward(sample, sample)
         return losses
-    
+   
 class TorchVisionInitiator():
     def __init__(self,initiator,w):
         self.initiator = initiator
