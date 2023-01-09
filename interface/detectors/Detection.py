@@ -144,7 +144,11 @@ class Detection:
             else:
                 img = torchvision.utils.draw_bounding_boxes(img,target["boxes"],labels, width=4)
         return img
-
+    def toX1Y1X2Y2C(self,device):
+        ret= torch.tensor([[x.x,x.y,x.x+x.w,x.y+x.h,x.c-1]for x in self.boxes2d]).to(device)
+        if(len(ret.shape) == 1):
+            ret = ret.view(0,5)
+        return ret
     def toTorchVisionTarget(self, device):
         boxes = []
         labels = []

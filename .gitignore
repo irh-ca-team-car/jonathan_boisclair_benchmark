@@ -6,3 +6,4 @@ coco/imgs
 imgs
 *.zip
 annotations
+*.pth

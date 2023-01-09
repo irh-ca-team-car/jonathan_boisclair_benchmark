@@ -2,6 +2,7 @@ import torch
 import torchvision
 import torch.nn as nn
 import numpy as np
+import fiftyone as fo
 class Size:
     def __init__(self,w,h) -> None:
         self.w=w
@@ -19,6 +20,13 @@ class Sample:
         img=torch.nn.functional.interpolate(img.unsqueeze(0) ,size=(640,640)).squeeze(0)
         s.setImage(img)
         return s
+    def fromFiftyOne(fiftyoneSample: fo.Sample):
+        s = Sample()
+        dict = fiftyoneSample.to_dict()
+        img = torchvision.io.read_image(dict["filepath"], torchvision.io.ImageReadMode.UNCHANGED).float()/255.0
+        s.setImage(img)
+        return s
+
     def __init__(self) -> None:
         
         self.detection = None

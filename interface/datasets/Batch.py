@@ -14,6 +14,7 @@ class Batch:
                 values = [v for v in range(index.start,index.stop,index.step)]
             else:
                 values = [v for v in range(index.start,index.stop)]
+            values = [v for v in values if v < len(self.dataset)]
             return [self.__getitem__(v) for v in values]
         return self.dataset[index*self.size:index*self.size+self.size]
         

@@ -24,6 +24,9 @@ class Detector(nn.Module):
                 if not isinstance(v,Sample):
                     raise Exception("Argument list contains non samples")
             if not self.support_batch:
+                if target is not None:
+                    return sum([self.forward(v[0],target=v[1], dataset=dataset) for v in zip(x,target)])
+                
                 return [self.forward(v, dataset=dataset) for v in x]
             else:
                 if self.num_channel ==1 :
@@ -59,6 +62,8 @@ class Detector(nn.Module):
     def register(name:str,objClass):
         global registered_detectors
         registered_detectors[name]=objClass
+    def named(name:str):
+        return registered_detectors[name]()
     def getAllRegisteredDetectors():
         return dict(registered_detectors)
     def calculateLoss(self,sample:Sample):
@@ -74,17 +79,28 @@ class GrayScaleDetector(Detector):
         return Detection()
 
 class TorchVisionDetector(Detector):
+    model:torch.nn.Module
     def __init__(self, initiator,w, num_classes=None):
         super(TorchVisionDetector,self).__init__(3,True)
         self.initiator = initiator
         self.w=w
-        self.model = initiator(weights=w)
+        if num_classes is not None:
+            tmpModel:torch.nn.Module = initiator(weights=w)
+            s_d = tmpModel.state_dict()
+            self.model:torch.nn.Module = initiator(num_classes=num_classes)
+            try:
+                self.model.load_state_dict(s_d,strict=False)
+            except:
+                pass
+        else:
+            self.model = initiator(weights=w)
         self.model.eval()
         self.dataset = "MS-COCO"
     def adaptTo(self,dataset):
         if self.dataset != dataset.getName():
             print("Torchvision model adapting to ",dataset.getName())
             newModel = TorchVisionDetector(self.initiator,self.w, num_classes=len(dataset.classesList())+1 )
+            print("New class has ",len(dataset.classesList())+1,"classes")
             newModel.dataset = dataset.getName()
             return newModel
         else:
