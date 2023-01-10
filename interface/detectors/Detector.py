@@ -85,13 +85,7 @@ class TorchVisionDetector(Detector):
         self.initiator = initiator
         self.w=w
         if num_classes is not None:
-            tmpModel:torch.nn.Module = initiator(weights=w)
-            s_d = tmpModel.state_dict()
             self.model:torch.nn.Module = initiator(num_classes=num_classes)
-            try:
-                self.model.load_state_dict(s_d,strict=False)
-            except:
-                pass
         else:
             self.model = initiator(weights=w)
         self.model.eval()
@@ -99,8 +93,12 @@ class TorchVisionDetector(Detector):
     def adaptTo(self,dataset):
         if self.dataset != dataset.getName():
             print("Torchvision model adapting to ",dataset.getName())
-            newModel = TorchVisionDetector(self.initiator,self.w, num_classes=len(dataset.classesList())+1 )
-            print("New class has ",len(dataset.classesList())+1,"classes")
+            newModel = TorchVisionDetector(self.initiator,self.w, num_classes=len(dataset.classesList()) )
+            try:
+                newModel.load_state_dict(self.state_dict(),strict=False)
+            except:
+                pass
+            print("New dataset has ",len(dataset.classesList()),"classes")
             newModel.dataset = dataset.getName()
             return newModel
         else:

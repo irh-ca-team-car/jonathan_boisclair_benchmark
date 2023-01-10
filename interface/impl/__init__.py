@@ -132,7 +132,12 @@ class EfficientDetector(Detector):
         self.module.apply(unfreeze_backbone_)
 
     def adaptTo(self, dataset):
+        state = self.module.state_dict()
         self.module = getEfficientDetImpl(num_class=len(dataset.classesList()),compound_coef=self.compound_coef)
+        try:
+            self.module.load_state_dict(state,strict=False)
+        except:
+            pass
         self.dataset = dataset
         return self
     def calculateLoss(self,sample:Sample):

@@ -90,6 +90,8 @@ class OpenImagesDetection:
 
     def getId(str: str):
         import sys
+        if OpenImagesDetection.A1Classes is None:
+            OpenImagesDetection.classesList()
         if str in OpenImagesDetection.A1Classes:
             return OpenImagesDetection.A1Classes.index(str)
         else:
@@ -97,6 +99,8 @@ class OpenImagesDetection:
             return OpenImagesDetection.getId("void")
 
     def getName(id=None):
+        if OpenImagesDetection.A1Classes is None:
+            OpenImagesDetection.classesList()
         if id is None or isinstance(id, OpenImagesDetection):
             return "OpenImages"
         if id >= 0 and id < len(OpenImagesDetection.A1Classes):
@@ -104,6 +108,8 @@ class OpenImagesDetection:
         return "void"
 
     def isBanned(nameOrId):
+        if OpenImagesDetection.A1Classes is None:
+            OpenImagesDetection.classesList()
         if isinstance(nameOrId, str):
             return nameOrId == "void"
         else:

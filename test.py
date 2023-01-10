@@ -1,10 +1,13 @@
 from interface.detectors import Detector, Detection, Box2d
 from interface.datasets import Sample, Size
 from interface.datasets.Citiscapes import CitiscapesDetection
+from interface.datasets.A1 import A1Detection
+from interface.datasets.A2 import A2Detection
 from interface.datasets.Coco import CocoDetection
 from interface.datasets.Batch import Batch
 from interface.datasets.OpenImages import OpenImagesDetection
 from interface.impl import EfficientDetector
+from interface.ITI import ITI
 import interface
 import torch
 import time
@@ -13,6 +16,7 @@ import torchvision
 import torchvision.transforms as transforms
 import pycocotools.coco
 import fiftyone.zoo as foz
+import os
 
 dataDir = 'interface/datasets/coco'
 dataType = 'val2014'
@@ -45,9 +49,11 @@ def show(t: torch.Tensor, wait: bool = False):
 
 
 datasets = [
+    A1Detection("data/attention-data/UQTRR/full.txt"),
+    A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"),
     OpenImagesDetection(dataset=foz.load_zoo_dataset("open-images-v6",
                                                                          split="validation",
-                                                                         max_samples=100,
+                                                                         max_samples=1000,
                                                                          seed=51,
                                                                          shuffle=False,
                                                                          label_type="detection",
@@ -59,7 +65,7 @@ datasets = [
     #CitiscapesDetection(mode="train", suffix="0.005.png"),
     #CitiscapesDetection(mode="train", suffix="0.01.png"),
     #CitiscapesDetection(mode="train", suffix="0.02.png"),
-    CitiscapesDetection(mode="val", suffix="8bit.png"),
+    # CitiscapesDetection(mode="val", suffix="8bit.png"),
     #CitiscapesDetection(mode="val", suffix="0.005.png"),
     #CitiscapesDetection(mode="val", suffix="0.01.png"),
     #CitiscapesDetection(mode="val", suffix="0.02.png"),
@@ -67,6 +73,42 @@ datasets = [
 ]
 #dataset = CitiscapesDetection(suffix="8bit.png")
 #dataset = CitiscapesDetection(suffix="0.02.png")
+device="cuda:0"
+itiName = "VCAE6"
+iti:ITI = ITI.named(itiName)().to(device)
+#iti:ITI = ITI.named("Identity")().to(device)
+itiNeedTraining=True
+if os.path.exists("iti_"+itiName+".pth"):
+    try:
+        iti.load_state_dict(torch.load("iti_"+itiName+".pth", map_location=device), strict=False)
+        itiNeedTraining=False
+    except:
+        pass
+if itiNeedTraining:
+    optimizer = torch.optim.Adamax(iti.parameters(), lr=2e-4)
+    loss_fn = torch.nn.HuberLoss().to(device)
+
+    for dataset in datasets:
+        from tqdm import tqdm
+        batch = Batch.of(dataset, 4)
+
+        iter = int(500/len(dataset))
+        if iter ==0:
+            iter=1
+        for b in range(iter):
+            for sample in tqdm(batch):
+                sample = [c.scale(Size(752, 480)).to(device) for c in sample]
+                optimizer.zero_grad()
+                output :Sample = iti(sample)
+
+                loss = sum([ loss_fn(a.getRGB(), b.getRGB()) for (a,b) in zip(sample,output)])
+                #loss = loss_fn(sample.getRGB(), output.getRGB())
+                loss.backward()
+                optimizer.step()
+                optimizer.zero_grad()
+
+                show(output[0].getRGB())
+    torch.save(iti.state_dict(), "iti_"+itiName+".pth")
 
 for dataset in datasets:
     from tqdm import tqdm
@@ -78,25 +120,36 @@ for dataset in datasets:
     print([name for (name, det) in models])
 
     for i, (name, det) in enumerate(models):
-        model: Detector = det.adaptTo(dataset.__class__).to("cuda:0")
+        model: Detector = det.adaptTo(dataset.__class__).to(device)
+        
+        
         model.train()
-        optimizer = torch.optim.Adamax(model.parameters())
+        tmpModule = torch.nn.ModuleList([model,iti])
+        optimizer = torch.optim.Adamax(tmpModule.parameters(), lr=6e-4)
         losses = 0
         batch = Batch.of(dataset, 1)
 
+        save_name = itiName+"_"+dataset.__class__.getName()+"_"+name+".pth"
+        if os.path.exists(save_name):
+            try:
+                tmpModule.load_state_dict(torch.load(save_name, map_location=device), strict=False)
+            except:
+                pass
+
         for b, cocoSamp in enumerate(tqdm(batch)):
-            cocoSamp = [c.scale(Size(512, 418)) for c in cocoSamp]
-
-            # if True:# dataset.__class__.getName() != "MS-COCO":
-            for b_ in range(5):
-                
-                losses = (model.calculateLoss(cocoSamp))
-
+            #cocoSamp = [c.scale(Size(512, 418)).to(device) for c in cocoSamp]
+            cocoSamp = [c.scale(Size(752, 480)).to(device) for c in cocoSamp]
+            
+            if True:# dataset.__class__.getName() != "MS-COCO":
+                values=iti.forward(cocoSamp)
+                losses: torch.Tensor = (model.calculateLoss(values))
+                loss_iti = sum([ loss_fn(a.getRGB(), b.getRGB()) for (a,b) in zip(cocoSamp,values)])
+                losses += loss_iti 
                 optimizer.zero_grad()
-                losses.backward()
-                if b_ == 4:
+                if not torch.isnan(losses):
+                    losses.backward()
                     tqdm.write(str(losses.item()))
-                optimizer.step()
+                    optimizer.step()
                 optimizer.zero_grad()
                 losses = 0
             
@@ -104,14 +157,15 @@ for dataset in datasets:
             model.eval()
 
             cocoSamp_ = cocoSamp[-1]
+            values = values[-1]
             del cocoSamp
-            cocoSamp = cocoSamp_
+            cocoSamp :Sample = cocoSamp_
             detections = model.forward(cocoSamp, dataset=dataset.__class__)
-            workImage = cocoSamp.clone()
+            workImage = values.clone()
             workImage = cocoSamp.detection.onImage(
                 workImage, colors=[(255, 0, 0)])
             #workImage = detections.filter(0.1).onImage(workImage)
-            workImage = detections.filter(0.3).onImage(workImage)
+            workImage = detections.filter(0.3).NMS_Pytorch().onImage(workImage)
             #workImage = detections.filter(0.90).onImage(workImage)
             # for b in detections.boxes2d:
             #    print(b)
@@ -120,4 +174,6 @@ for dataset in datasets:
             model.train()
             cv2.waitKey(100)
             #del model
+
+        torch.save(tmpModule.state_dict(),save_name)
         pass

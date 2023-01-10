@@ -7,12 +7,13 @@ class Size:
     def __init__(self,w,h) -> None:
         self.w=w
         self.h=h
+    def __repr__(self) -> str:
+        return "["+str(self.w)+"x"+str(self.h)+"]"
 class Sample:
     img : torch.Tensor
     _thermal : torch.Tensor
     _lidar : torch.Tensor
     detection : None
-
    
     def Example():
         s = Sample()
@@ -26,7 +27,9 @@ class Sample:
         img = torchvision.io.read_image(dict["filepath"], torchvision.io.ImageReadMode.UNCHANGED).float()/255.0
         s.setImage(img)
         return s
-
+    def size(self) ->Size:
+        shape = self.getRGB().shape[1:]
+        return Size(shape[1],shape[0])
     def __init__(self) -> None:
         
         self.detection = None
@@ -35,6 +38,14 @@ class Sample:
         self._lidar = None
         #self.img = torch.zeros(3,640,640)
         pass
+    def to(self,device):
+        if self.img is not None:
+            self.img = self.img.to(device)
+        if self._thermal is not None:
+            self._thermal = self._thermal.to(device)
+        if self._lidar is not None:
+            self._lidar = self._lidar.to(device)
+        return self
     def clone(self):
         newSample = Sample()
         if self.img is not None:
@@ -65,7 +76,7 @@ class Sample:
             if not isinstance(x, Size):
                 self._thermal=torch.nn.functional.interpolate(img,scale_factor=(y,x))[0]
             else:
-                self.img=torch.nn.functional.interpolate(img,size=(x.h,x.w))[0]
+                self._thermal=torch.nn.functional.interpolate(img,size=(x.h,x.w))[0]
         if self.detection is not None:
             if not isinstance(x, Size):
                 newSample.detection = self.detection.scale(x,y)
@@ -77,9 +88,14 @@ class Sample:
     def setImage(self,img):
         if isinstance(img,np.ndarray):
             self.img = torch.from_numpy(img)
-
         if isinstance(img,torch.Tensor):
             self.img=img
+        pass
+    def setThermal(self,img):
+        if isinstance(img,np.ndarray):
+            self._thermal = torch.from_numpy(img)
+        if isinstance(img,torch.Tensor):
+            self._thermal=img
         pass
     def hasImage(self) -> bool:
         return self.img is not None

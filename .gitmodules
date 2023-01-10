@@ -1,3 +1,9 @@
 [submodule "EffDet"]
 	path = interface/impl/EffDet
 	url = git@github.com:boiscljo/Yet-Another-EfficientDet-Pytorch.git
+[submodule "data/attention-data"]
+	path = data/attention-data
+	url = git@github.com:irh-ca-team-car/attention-data
+[submodule "interface/ITI/impl/CAE-base"]
+	path = interface/ITI/impl/CAEbase
+	url = git@github.com:irh-ca-team-car/CAE-base
