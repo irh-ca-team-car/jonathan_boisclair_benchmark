@@ -84,9 +84,9 @@ if os.path.exists("iti_"+itiName+".pth"):
         itiNeedTraining=False
     except:
         pass
+loss_fn = torch.nn.HuberLoss().to(device)
 if itiNeedTraining:
     optimizer = torch.optim.Adamax(iti.parameters(), lr=2e-4)
-    loss_fn = torch.nn.HuberLoss().to(device)
 
     for dataset in datasets:
         from tqdm import tqdm
@@ -137,8 +137,9 @@ for dataset in datasets:
                 pass
 
         for b, cocoSamp in enumerate(tqdm(batch)):
-            #cocoSamp = [c.scale(Size(512, 418)).to(device) for c in cocoSamp]
-            cocoSamp = [c.scale(Size(752, 480)).to(device) for c in cocoSamp]
+            #cocoSamp = [c.scale(Size(512, 416)).to(device) for c in cocoSamp]
+            #cocoSamp = [c.scale(Size(752, 480)).to(device) for c in cocoSamp]
+            cocoSamp = [c.scale(Size(480, 352)).to(device) for c in cocoSamp]
             
             if True:# dataset.__class__.getName() != "MS-COCO":
                 values=iti.forward(cocoSamp)
