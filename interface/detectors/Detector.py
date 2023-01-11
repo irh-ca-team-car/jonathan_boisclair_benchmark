@@ -156,3 +156,5 @@ Detector.register("fcos_resnet50_fpn",TorchVisionInitiator(torchvision.models.de
 #Detector.register("keypointrcnn_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.keypointrcnn_resnet50_fpn, torchvision.models.detection.KeypointRCNN_ResNet50_FPN_Weights.COCO_V1))
 Detector.register("retinanet_resnet50_fpn_v2",TorchVisionInitiator(torchvision.models.detection.retinanet_resnet50_fpn_v2, torchvision.models.detection.RetinaNet_ResNet50_FPN_V2_Weights.COCO_V1))
 #Detector.register("maskrcnn_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.maskrcnn_resnet50_fpn, torchvision.models.detection.MaskRCNN_ResNet50_FPN_Weights.COCO_V1))
+Detector.register("ssd",TorchVisionInitiator(torchvision.models.detection.ssd300_vgg16, torchvision.models.detection.SSD300_VGG16_Weights.COCO_V1))
+Detector.register("ssd_lite",TorchVisionInitiator(torchvision.models.detection.ssdlite320_mobilenet_v3_large, torchvision.models.detection.SSDLite320_MobileNet_V3_Large_Weights.COCO_V1.COCO_V1))

@@ -49,19 +49,20 @@ def show(t: torch.Tensor, wait: bool = False):
 
 
 datasets = [
-    A1Detection("data/attention-data/UQTRR/full.txt"),
-    A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"),
-    OpenImagesDetection(dataset=foz.load_zoo_dataset("open-images-v6",
-                                                                         split="validation",
-                                                                         max_samples=1000,
-                                                                         seed=51,
-                                                                         shuffle=False,
-                                                                         label_type="detection",
-                                                                         classes=[
-                                                                             "Car"],
-                                                                         dataset_name="openimagescar"
-                                                                         )),
-    CitiscapesDetection(mode="train", suffix="8bit.png"),
+    #("A1_UQTR_REGULAR",A1Detection("data/attention-data/UQTRR/full.txt")),
+    #("A2",A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv")),
+    ("FLIR_CONVERTED",A2Detection("data/FLIR_CONVERTED/all.csv")),
+    # ("OpenImages",OpenImagesDetection(dataset=foz.load_zoo_dataset("open-images-v6",
+    #                                                                      split="validation",
+    #                                                                      max_samples=1000,
+    #                                                                      seed=51,
+    #                                                                      shuffle=False,
+    #                                                                      label_type="detection",
+    #                                                                      classes=[
+    #                                                                          "Car"],
+    #                                                                      dataset_name="openimagescar"
+    #                                                                      ))),
+    # CitiscapesDetection(mode="train", suffix="8bit.png"),
     #CitiscapesDetection(mode="train", suffix="0.005.png"),
     #CitiscapesDetection(mode="train", suffix="0.01.png"),
     #CitiscapesDetection(mode="train", suffix="0.02.png"),
@@ -69,7 +70,7 @@ datasets = [
     #CitiscapesDetection(mode="val", suffix="0.005.png"),
     #CitiscapesDetection(mode="val", suffix="0.01.png"),
     #CitiscapesDetection(mode="val", suffix="0.02.png"),
-    CocoDetection("interface/datasets/coco/imgs", annFile)
+    #CocoDetection("interface/datasets/coco/imgs", annFile)
 ]
 #dataset = CitiscapesDetection(suffix="8bit.png")
 #dataset = CitiscapesDetection(suffix="0.02.png")
@@ -86,10 +87,11 @@ if os.path.exists("iti_"+itiName+".pth"):
     except:
         pass
 loss_fn = torch.nn.HuberLoss().to(device)
+itiNeedTraining=False
 if itiNeedTraining:
     optimizer = torch.optim.Adamax(iti.parameters(), lr=2e-4)
 
-    for dataset in datasets:
+    for dname,dataset in datasets:
         from tqdm import tqdm
         batch = Batch.of(dataset, 4)
 
@@ -98,11 +100,11 @@ if itiNeedTraining:
             iter=1
         for b in range(iter):
             for sample in tqdm(batch):
-                sample = [c.scale(Size(752, 480)).to(device) for c in sample]
+                sample = [c.scale(Size(480, 352)).to(device) for c in sample]
                 optimizer.zero_grad()
                 output :Sample = iti(sample)
 
-                loss = sum([ loss_fn(a.getRGB(), b.getRGB()) for (a,b) in zip(sample,output)])
+                loss = sum([ iti.loss(a, b) for (a,b) in zip(sample,output)])
                 #loss = loss_fn(sample.getRGB(), output.getRGB())
                 loss.backward()
                 optimizer.step()
@@ -111,7 +113,7 @@ if itiNeedTraining:
                 show(output[0].getRGB())
     torch.save(iti.state_dict(), "iti_"+itiName+".pth")
 
-for dataset in datasets:
+for dname,dataset in datasets:
     from tqdm import tqdm
     # models = [(name, det())
     #      for (name, det) in Detector.getAllRegisteredDetectors().items()]
@@ -130,7 +132,7 @@ for dataset in datasets:
         losses = 0
         batch = Batch.of(dataset, 1)
 
-        save_name = itiName+"_"+dataset.__class__.getName()+"_"+name+".pth"
+        save_name = itiName+"_"+dname+"_"+name+".pth"
         if os.path.exists(save_name):
             try:
                 tmpModule.load_state_dict(torch.load(save_name, map_location=device), strict=False)
@@ -145,7 +147,7 @@ for dataset in datasets:
             if True:# dataset.__class__.getName() != "MS-COCO":
                 values=iti.forward(cocoSamp)
                 losses: torch.Tensor = (model.calculateLoss(values))
-                loss_iti = sum([ loss_fn(a.getRGB(), b.getRGB()) for (a,b) in zip(cocoSamp,values)])
+                loss_iti = sum([ iti.loss(a, b) for (a,b) in zip(cocoSamp,values)])
                 losses += loss_iti 
                 optimizer.zero_grad()
                 if not torch.isnan(losses):

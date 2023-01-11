@@ -8,3 +8,6 @@ else
     cd interface/datasets/coco
     unzip annotations_trainval2014.zip
 fi
+
+npm install pad-left
+node convert-flir.mjs

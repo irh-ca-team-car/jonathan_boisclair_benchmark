@@ -10,3 +10,6 @@ annotations
 *.mat
 *.png
 *.jpg
+FLIR_CONVERTED
+node_modules
+package*.json

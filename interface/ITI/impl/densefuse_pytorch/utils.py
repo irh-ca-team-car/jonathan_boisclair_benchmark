@@ -30,6 +30,9 @@ def load_img(img_path, img_type='gray'):
         if img_path.shape[1] ==1:
             img_path=img_path.repeat(1,3,1,1)
         return img_path
+    else:
+        print(img_path.__class__)
+        exit(-1)
     img = Image.open(img_path)
     if img_type=='gray':
         img = img.convert('L')
@@ -106,6 +109,8 @@ class test_rgb(Test):
 
     def get_fusion(self,img1_path,img2_path,model,
                    save_path = './test_result/', save_name = 'none', mode='l1',window_width=1):
+        if img2_path is None:
+            img2_path = torch.zeros(img1_path.shape).to(img1_path.device)
         img1, img2 = self.load_imgs(img1_path,img2_path,self.device)
         img_fusion = (torch.cat(
                              [fusion(img1[:,i,:,:][:,None,:,:], 
