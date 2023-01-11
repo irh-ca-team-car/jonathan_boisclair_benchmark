@@ -26,8 +26,9 @@ def show(t: torch.Tensor,wait: bool = False):
     else:
         cv2.waitKey(1)
 device ="cuda:0" 
-for (name,iti) in ITI.allRegistered().items():
-    model = iti().to(device)
+#for (name,iti) in ITI.allRegistered().items():
+for iti in [ITI.named("DenseFuse")]:
+    model :ITI = iti().to(device)
     dataset = A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv")
     optimizer = torch.optim.Adamax(model.parameters(), lr=2e-4)
     loss_fn = torch.nn.HuberLoss().to(device)
@@ -36,9 +37,8 @@ for (name,iti) in ITI.allRegistered().items():
         for sample in dataset:
             sample.to(device)
             optimizer.zero_grad()
-            output :Sample = model(sample)
-
-            loss = loss_fn(sample.getRGB(), output.getRGB())
+            output :Sample = model.forward(sample)
+            loss=model.loss(sample, output)
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()

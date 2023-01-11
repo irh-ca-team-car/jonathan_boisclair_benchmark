@@ -7,3 +7,6 @@ imgs
 *.zip
 annotations
 *.pth
+*.mat
+*.png
+*.jpg

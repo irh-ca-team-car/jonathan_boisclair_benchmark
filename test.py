@@ -75,6 +75,7 @@ datasets = [
 #dataset = CitiscapesDetection(suffix="0.02.png")
 device="cuda:0"
 itiName = "VCAE6"
+itiName = "DenseFuse"
 iti:ITI = ITI.named(itiName)().to(device)
 #iti:ITI = ITI.named("Identity")().to(device)
 itiNeedTraining=True
