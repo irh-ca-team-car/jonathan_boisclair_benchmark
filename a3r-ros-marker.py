@@ -140,7 +140,6 @@ class PredictionPub(Node):
         self.running=False
         self.pub.publish(outputMsg)
         img = det.onImage(s)
-        print("pub")
         imgMsg = CvBridge().cv2_to_imgmsg(tensorToCV2(img),"bgr8")
         self.pubviz.publish(imgMsg)
 
