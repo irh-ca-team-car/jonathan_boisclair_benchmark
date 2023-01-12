@@ -6,6 +6,15 @@ import padLeft from "pad-left";
 var annotations = await fsp.readFile("/media/boiscljo/LinuxData/Datasets/FLIR ADK FREE/FLIR_ADAS_1_3/train/thermal_annotations.json", "utf8")
 var annotationsVal = await fsp.readFile("/media/boiscljo/LinuxData/Datasets/FLIR ADK FREE/FLIR_ADAS_1_3/val/thermal_annotations.json", "utf8")
 
+//"traffic signal","car","bike","pedestrian"
+let FLIR_CATEGORIES = {
+    1:  3 ,
+    2:  2,
+    3:  1,
+    18:  3, 
+    91:  1
+}
+
 annotations = JSON.parse(annotations);
 annotationsVal = JSON.parse(annotationsVal);
 
@@ -80,10 +89,8 @@ await fsp.writeFile(path.join(FLIR_DIR, "all.csv"), "");
 await fsp.writeFile(path.join(FLIR_DIR, "val.csv"), "");
 
 await Promise.all(Object.values(data).map(async element => {
-    //console.log(element);
-
     var { jpg, tiff, img_data } = imagePath(element.category)
-
+    
     var num = padLeft(element.category, 5, "0");
     var train_dir = path.resolve("/media/boiscljo/LinuxData/Datasets/FLIR ADK FREE/FLIR_ADAS_1_3/train/");
     var jpg = path.join(train_dir, jpg)
@@ -105,7 +112,7 @@ await Promise.all(Object.values(data).map(async element => {
             bbox[1] /= h;
             bbox[2] /= w;
             bbox[3] /= h;
-            await fsp.appendFile(path.join(LABELS_DIR, num + ".txt"), x.category_id + " " + x.bbox.join(" ") + "\r\n")
+            await fsp.appendFile(path.join(LABELS_DIR, num + ".txt"), FLIR_CATEGORIES[x.category_id] + " " + x.bbox.join(" ") + "\r\n")
         }))
     } catch (ex) {
         console.error("error",ex);
@@ -139,7 +146,10 @@ await Promise.all(Object.values(dataVal).map(async element => {
             bbox[1] /= h;
             bbox[2] /= w;
             bbox[3] /= h;
-            await fsp.appendFile(path.join(LABELS_DIR, num + ".txt"), x.category_id + " " + x.bbox.join(" ") + "\r\n")
+
+            
+
+            await fsp.appendFile(path.join(LABELS_DIR, num + ".txt"), FLIR_CATEGORIES[x.category_id] + " " + x.bbox.join(" ") + "\r\n")
         }))
     } catch (ex){
         console.error("error",ex);

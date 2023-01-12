@@ -1,2 +1,2 @@
 from .Detector import *
-from .Detection import *
+from ..datasets.Sample import *
