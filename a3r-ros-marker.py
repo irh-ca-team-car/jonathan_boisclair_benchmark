@@ -4,7 +4,6 @@ import rclpy
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 import math
-from apollo_msgs.msg import ApolloperceptionPerceptionObstacles,ApolloperceptionPerceptionObstacle
 from visualization_msgs.msg import MarkerArray, Marker
 from tf2_msgs.msg import TFMessage
 from std_msgs.msg import Header
