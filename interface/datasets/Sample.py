@@ -1,28 +1,45 @@
-from typing import List, Tuple
+from typing import Dict, List, Tuple, Union
 import torch
 import torchvision
 import torch.nn as nn
 import numpy as np
-import fiftyone as fo
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    import fiftyone as fo
+    from .classification import ClassificationDataset
+    from .detection import DetectionDataset
+
 class Size:
     def __init__(self,w,h) -> None:
         self.w=w
         self.h=h
     def __repr__(self) -> str:
         return "["+str(self.w)+"x"+str(self.h)+"]"
+
+
 class Sample:
     img : torch.Tensor
     _thermal : torch.Tensor
     _lidar : torch.Tensor
-    detection : None
+    detection: "Detection"
+    classification: "Classification"
    
-    def Example():
+    
+    def __init__(self) -> None:
+        self.detection = None
+        self.classification = None
+        self._img = None
+        self._thermal = None
+        self._lidar = None
+        #self.img = torch.zeros(3,640,640)
+        pass
+    def Example() -> "Sample":
         s = Sample()
         img = torchvision.io.read_image("data/1.jpg", torchvision.io.ImageReadMode.UNCHANGED).float()/255.0
         img=torch.nn.functional.interpolate(img.unsqueeze(0) ,size=(640,640)).squeeze(0)
         s.setImage(img)
         return s
-    def fromFiftyOne(fiftyoneSample: fo.Sample):
+    def fromFiftyOne(fiftyoneSample: "fo.Sample") -> "Sample":
         s = Sample()
         dict = fiftyoneSample.to_dict()
         img = torchvision.io.read_image(dict["filepath"], torchvision.io.ImageReadMode.UNCHANGED).float()/255.0
@@ -31,23 +48,19 @@ class Sample:
     def size(self) ->Size:
         shape = self.getRGB().shape[1:]
         return Size(shape[1],shape[0])
-    def __init__(self) -> None:
-        
-        self.detection = None
-        self._img = None
-        self._thermal = None
-        self._lidar = None
-        #self.img = torch.zeros(3,640,640)
-        pass
-    def to(self,device):
+    def to(self,device) -> "Sample":
         if self.img is not None:
             self.img = self.img.to(device)
         if self._thermal is not None:
             self._thermal = self._thermal.to(device)
         if self._lidar is not None:
             self._lidar = self._lidar.to(device)
+        if self.detection is not None:
+            self.detection = self.detection.to(device)
+        if self.classification is not None:
+            self.classification = self.classification.to(device)
         return self
-    def clone(self):
+    def clone(self) -> "Sample":
         newSample = Sample()
         if self.img is not None:
             newSample.img = self.img.clone()
@@ -57,8 +70,10 @@ class Sample:
             newSample._lidar = self._lidar.clone()
         if self.detection is not None:
             newSample.detection = self.detection.scale()
+        if self.classification is not None:
+            newSample.classification = self.classification.clone()
         return newSample
-    def scale(self, x=1.0,y=None):
+    def scale(self, x=1.0,y=None) -> "Sample":
         if isinstance(x, Size):
             xFactor = x.w/self.img.shape[2]
             yFactor = x.h/self.img.shape[1]
@@ -86,18 +101,18 @@ class Sample:
 
         return newSample
 
-    def setImage(self,img):
+    def setImage(self,img) -> "Sample":
         if isinstance(img,np.ndarray):
             self.img = torch.from_numpy(img)
         if isinstance(img,torch.Tensor):
             self.img=img
-        pass
-    def setThermal(self,img):
+        return self
+    def setThermal(self,img)-> "Sample":
         if isinstance(img,np.ndarray):
             self._thermal = torch.from_numpy(img)
         if isinstance(img,torch.Tensor):
             self._thermal=img
-        pass
+        return self 
     def hasImage(self) -> bool:
         return self.img is not None
     def isRgb(self) -> bool:
@@ -144,12 +159,13 @@ class Sample:
         if self.hasThermal():
             return self._thermal
         return None
-    def toTorchVisionTarget(self, device):
+    def toTorchVisionTarget(self, device) -> Dict[str,torch.Tensor]:
         if self.detection is not None:
             return self.detection.toTorchVisionTarget(device)
         return None
-    def setTarget(self,detection):
+    def setTarget(self,detection) -> "Sample":
         self.detection = detection
+        return self
     
 
 class Box2d:
@@ -166,7 +182,7 @@ class Box2d:
         self.c = 0
         self.cf = 0
         self.cn = ""
-    def scale(self,x=1.0,y=1.0):
+    def scale(self,x=1.0,y=1.0) -> "Box2d":
         newBox = Box2d()
         newBox.x = self.x*x
         newBox.y = self.y*y
@@ -194,7 +210,7 @@ class Box3d:
     c: float
     cf: float
     cn: str
-    def scale(self,x=1.0,y=1.0, z=1.0):
+    def scale(self,x=1.0,y=1.0, z=1.0) -> "Box3d":
         newBox = Box3d()
         newBox.x = self.x*x
         newBox.y = self.y*y
@@ -218,21 +234,26 @@ class Box3d:
 
     def __repr__(self) -> str:
         return self.__str__()
+
+
 class Detection:
     boxes2d: List[Box2d]
     boxes3d: List[Box3d]
+    device : torch.device
 
     def __init__(self) -> None:
         self.boxes2d = []
         self.boxes3d = []
+        self.device = torch.device("cpu")
         
-    def scale(self,x=1.0,y=1.0):
+    def scale(self,x=1.0,y=1.0) -> "Detection":
         newDet = Detection()
         newDet.boxes2d = [b.scale(x,y) for b in self.boxes2d]
         newDet.boxes3d = list([b.scale() for b in self.boxes3d])
         return newDet
-
-    def fromTorchVision(torchVisionResult, dataset=None):
+    def to(self,device)-> "Detection":
+        return self
+    def fromTorchVision(torchVisionResult, dataset=None)-> "Detection":
         ret = []
         for res in torchVisionResult:
             det = Detection()
@@ -256,17 +277,19 @@ class Detection:
             return None
         return ret
 
-    def filter(self, th):
+    def filter(self, th)-> "Detection":
         newVal = Detection()
+        newVal.device = self.device
         newVal.boxes2d = [x for x in self.boxes2d if x.cf > th]
         newVal.boxes3d = [x for x in self.boxes3d if x.cf > th]
         return newVal
-    def c(self,c):
+    def c(self,c)-> "Detection":
         d = Detection()
+        d.device = self.device
         d.boxes2d = [x for x in self.boxes2d if int(x.c) == int(c)]
         d.boxes3d = [x for x in self.boxes3d if int(x.c) == int(c)]
         return d
-    def onImage(self, sample: Sample, colors:List[Tuple[int,int,int]]=None):
+    def onImage(self, sample, colors:List[Tuple[int,int,int]]=None)->torch.Tensor:
         if isinstance(sample,Sample):
             img = (sample.getRGB()*255.0).byte()
         elif isinstance(sample,torch.Tensor):
@@ -287,18 +310,24 @@ class Detection:
                 pass
             else:
                 img = torchvision.utils.draw_bounding_boxes(img,target["boxes"],labels, width=4)
-        return img
-    def toX1Y1X2Y2C(self,device="cpu"):
+        return img.to(self.device)
+    def toX1Y1X2Y2C(self,device=None) -> torch.Tensor:
+        if device is None:
+            device = self.device
         ret= torch.tensor([[x.x,x.y,x.x+x.w,x.y+x.h,x.c-1]for x in self.boxes2d]).to(device)
         if(len(ret.shape) == 1):
             ret = ret.view(0,5)
-        return ret
-    def toX1Y1X2Y2CFC(self,device="cpu"):
+        return ret.to(self.dev)
+    def toX1Y1X2Y2CFC(self,device=None)-> torch.Tensor:
+        if device is None:
+            device = self.device
         ret= torch.tensor([[x.x,x.y,x.x+x.w,x.y+x.h,x.cf,x.c-1]for x in self.boxes2d]).to(device)
         if(len(ret.shape) == 1):
             ret = ret.view(0,6)
         return ret
-    def toTorchVisionTarget(self, device="cpu"):
+    def toTorchVisionTarget(self, device=None) -> Dict[str,torch.Tensor]:
+        if device is None:
+            device = self.device
         boxes = []
         labels = []
         scores = []
@@ -325,7 +354,7 @@ class Detection:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def NMS(self, overlapThresh = 0.4) :
+    def NMS(self, overlapThresh = 0.4) -> "Detection" :
         import numpy as np
         newDetection = self.filter(0)
         # Return an empty list, if no boxes given
@@ -360,9 +389,9 @@ class Detection:
             #return only the boxes at the remaining indices
         newDetection.boxes2d = [newDetection.boxes2d[i] for i in indices]
         #newDetection.boxes2d = newDetection.boxes2d[indices].astype(int)
-
+        newDetection.device = self.device
         return newDetection
-    def NMS_Pytorch(self,thresh_iou : float=0.4):
+    def NMS_Pytorch(self,thresh_iou : float=0.4)-> "Detection" :
         """
         Apply non-maximum suppression to avoid detecting too many
         overlapping bounding boxes for a given object.
@@ -457,6 +486,25 @@ class Detection:
         
         newDetection.boxes2d = [newDetection.boxes2d[i] for i in keep]
         #newDetection.boxes2d = newDetection.boxes2d[indices].astype(int)
-
+        newDetection.device = self.device
         return newDetection
 
+class Classification:
+    confidences : torch.Tensor
+    device: torch.device
+    dataset: "ClassificationDataset"
+    def __init__(self, confidences: Union[torch.Tensor,int], dataset: "ClassificationDataset" = None) -> None:
+        if isinstance(confidences,int):
+            self.confidences = torch.zeros(len(dataset.classesList()))
+            self.confidences[confidences]=1
+        else:
+            self.confidences=confidences
+        self.device=torch.device("cpu")
+        self.dataset = dataset
+    def to(self,device) -> "Classification":
+        self.device = device
+        self.confidences = self.confidences.to(device)
+    def getCategory(self)-> int:
+        return self.confidences.argmax().item()
+    def getCategoryName(self)->str:
+        return self.dataset.getName(self.getCategory())

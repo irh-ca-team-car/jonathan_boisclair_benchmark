@@ -1,7 +1,8 @@
 from typing import Any, Tuple
-from .coco.CocoDetection import CocoDetection as CD
-from . import Sample
-from ..detectors.Detection import Detection,Box2d
+from .DetectionDataset import DetectionDataset
+from ..coco.CocoDetection import CocoDetection as CD
+from .. import Sample
+from ...detectors.Detection import Detection,Box2d
 import torchvision.transforms
 
 mscoco = ['__background__',
@@ -95,7 +96,7 @@ mscoco = ['__background__',
  'teddy bear',
  'hair drier',
  'toothbrush']
-class CocoDetection:
+class CocoDetection(DetectionDataset):
     def classesList():
         return list(mscoco)
     def getId(str:str):

@@ -1,20 +1,8 @@
-from interface.datasets import Sample
-from interface.datasets.Coco import CocoDetection
 import rclpy
 from rclpy.node import Node
-from rclpy.parameter import Parameter
-import math
-from visualization_msgs.msg import MarkerArray, Marker
 from tf2_msgs.msg import TFMessage
-from std_msgs.msg import Header
-from sensor_msgs.msg import Image, CompressedImage
 from geometry_msgs.msg import TransformStamped
-from builtin_interfaces.msg import Time
 from interface.detectors.Detector import Detector
-from cv_bridge import CvBridge
-import torch
-import torchvision
-import cv2
 import json
 import yaml
 import os

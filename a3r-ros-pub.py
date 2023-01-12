@@ -8,7 +8,7 @@ Original file is located at
 """
 
 import rclpy
-from cv_bridge import CvBridge, CvBridgeError
+from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 import cv2
 from rclpy.node import Node
@@ -20,7 +20,7 @@ class ImagePublisher(Node):
         self.bridge = CvBridge()
         self.image_pub = self.create_publisher(Image,"/output_image", 1)
         self.timer = self.create_timer(0.1,self.tmr)
-        self.vid = cv2.VideoCapture(0)
+        self.vid = cv2.VideoCapture("/dev/video0")
 
     def tmr(self):
         ret, frame = self.vid.read()

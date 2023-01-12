@@ -1,21 +1,12 @@
+from typing import List, Tuple
 from interface.detectors import Detector, Detection, Box2d
 from interface.datasets import Sample, Size
-from interface.datasets.Citiscapes import CitiscapesDetection
-from interface.datasets.A1 import A1Detection
-from interface.datasets.A2 import A2Detection
-from interface.datasets.Coco import CocoDetection
+from interface.datasets.detection import *
 from interface.datasets.Batch import Batch
-from interface.datasets.OpenImages import OpenImagesDetection
-from interface.impl import EfficientDetector
 from interface.ITI import ITI
-import interface
 import torch
-import time
 import cv2
-import torchvision
-import torchvision.transforms as transforms
 import pycocotools.coco
-import fiftyone.zoo as foz
 import os
 
 dataDir = 'interface/datasets/coco'
@@ -48,7 +39,7 @@ def show(t: torch.Tensor, wait: bool = False):
         cv2.waitKey(1)
 
 
-datasets = [
+datasets : List[Tuple[str,DetectionDataset]] = [
     #("A1_UQTR_REGULAR",A1Detection("data/attention-data/UQTRR/full.txt")),
     #("A2",A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv")),
     ("FLIR_CONVERTED",A2Detection("data/FLIR_CONVERTED/all.csv")),
@@ -119,7 +110,7 @@ for dname,dataset in datasets:
     #      for (name, det) in Detector.getAllRegisteredDetectors().items()]
     #models = [models[-1]]
     #models = [("EfficientDetector_d0", Detector.named("EfficientDetector_d0"))]
-    models = [("retinanet_resnet50_fpn_v2",Detector.named("retinanet_resnet50_fpn_v2"))]
+    models : List[Tuple[str,Detector]] = [("retinanet_resnet50_fpn_v2",Detector.named("retinanet_resnet50_fpn_v2"))]
     print([name for (name, det) in models])
 
     for i, (name, det) in enumerate(models):

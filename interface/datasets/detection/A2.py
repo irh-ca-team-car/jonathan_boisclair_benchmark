@@ -1,9 +1,9 @@
-from typing import Any, List, Tuple
-from . import Sample
-from ..detectors.Detection import Detection, Box2d,Box3d
+from typing import List
+from .. import Sample
+from .DetectionDataset import DetectionDataset
+from ...detectors.Detection import Detection, Box2d
 import torchvision.transforms
 import os
-import json
 import torchvision.io
 import numpy as np
 import torch
@@ -17,7 +17,7 @@ class A2Group:
     def __repr__(self) -> str:
         return self.__dict__.__str__()
 
-class A2Detection:
+class A2Detection(DetectionDataset):
     A2Classes = ["void"	,"traffic signal","car","bike","pedestrian"]
     def classesList():
         return list(A2Detection.A2Classes)

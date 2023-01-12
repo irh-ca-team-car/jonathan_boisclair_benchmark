@@ -1,6 +1,7 @@
 from typing import Any, List, Tuple
-from . import Sample
-from ..detectors.Detection import Detection, Box2d,Box3d
+from .. import Sample
+from .DetectionDataset import DetectionDataset
+from ...detectors.Detection import Detection, Box2d,Box3d
 import torchvision.transforms
 import os
 import json
@@ -26,7 +27,7 @@ class CitiscapesGroup:
     def __repr__(self) -> str:
         return json.dumps(self.__dict__)
 
-class CitiscapesDetection:
+class CitiscapesDetection(DetectionDataset):
     CitiscapesClasses = ["void"	,"road",
 "sidewalk","parking","rail track",
 "human"	,"person","rider",

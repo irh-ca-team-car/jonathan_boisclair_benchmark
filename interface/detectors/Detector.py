@@ -1,12 +1,12 @@
-from typing import List
+from typing import Dict, List
 import torch
 import torch.nn as nn
 from ..datasets.Sample import Sample
 from .Detection import Detection
 
-registered_detectors = dict()
-class Detector(nn.Module):
 
+class Detector(nn.Module):
+    registered_detectors = dict()
     def __init__(self,num_channel:int, support_batch):
         super(Detector,self).__init__()
         self.num_channel = num_channel
@@ -15,7 +15,7 @@ class Detector(nn.Module):
 
     def forward(self, x:Sample, target=None, dataset=None) -> Detection:
         if dataset is None:
-            from ..datasets.Coco import CocoDetection
+            from ..datasets.detection import CocoDetection
             dataset = CocoDetection
         if not isinstance(x,Sample) and not isinstance(x,list):
             raise Exception("Argument is not a Sample")
@@ -47,26 +47,29 @@ class Detector(nn.Module):
         print("Adapting to ",dataset.getName())
         return self
     def eval(self):
-        pass
+        return self
     def train(self):
-        pass
-    def save(self,file):
+        return self
+    def save(self,file) ->None:
         torch.save(self.state_dict(),file)
-    def load(self,file):
+    def load(self,file)->None:
         state_dict= torch.load(file, map_location=self.device)
-        self.load_state_dict(state_dict, strict = False)
+        try:
+            self.load_state_dict(state_dict, strict = False)
+        except:
+            pass
     def to(self,device:torch.device):
         super(Detector,self).to(device)
         self.device = device
         return self
-    def register(name:str,objClass):
-        global registered_detectors
-        registered_detectors[name]=objClass
+    def register(name:str,objClass) -> None:
+        Detector.registered_detectors[name]=objClass
     def named(name:str):
-        return registered_detectors[name]()
-    def getAllRegisteredDetectors():
-        return dict(registered_detectors)
-    def calculateLoss(self,sample:Sample):
+        c:Detector= Detector.registered_detectors[name]()
+        return c
+    def getAllRegisteredDetectors() -> Dict[str,type]:
+        return dict(Detector.registered_detectors)
+    def calculateLoss(self,sample:Sample)->torch.Tensor:
         ret=self.forward(sample, sample)
         if isinstance(ret,list):
             ret= sum(ret)

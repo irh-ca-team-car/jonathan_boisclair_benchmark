@@ -1,13 +1,12 @@
-from typing import Any, List, Tuple
-from . import Sample
-from ..detectors.Detection import Detection, Box2d,Box3d
+from typing import List
+from .. import Sample
+from .DetectionDataset import DetectionDataset
+from ...detectors.Detection import Detection, Box2d
 import torchvision.transforms
 import os
-import json
 import torchvision.io
-import numpy as np
 
-class A1Detection:
+class A1Detection(DetectionDataset):
     A1Classes = ["void"	,"traffic signal","car","bike","pedestrian"]
     def classesList():
         return list(A1Detection.A1Classes)

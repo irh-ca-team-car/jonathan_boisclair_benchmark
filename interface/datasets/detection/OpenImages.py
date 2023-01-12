@@ -1,11 +1,5 @@
-from typing import Any, List, Tuple
-from . import Sample
-from ..detectors.Detection import Detection, Box2d, Box3d
-import torchvision.transforms
-import os
-import json
-import torchvision.io
-import numpy as np
+from .. import Sample
+from ...detectors.Detection import Detection, Box2d
 import fiftyone as fo
 import fiftyone.zoo as foz
 
