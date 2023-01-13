@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Callable, Dict, List, Type, Union
 import torch
 import torch.nn as nn
 from ..datasets.Sample import Sample,Classification
@@ -6,7 +6,7 @@ from ..datasets.classification import ClassificationDataset, ImageNetDataset
 import torchvision
 
 class Classifier(nn.Module):
-    registered_classifiers = dict()
+    registered_classifiers: Dict[str,Callable[[],"Classifier"]] = dict()
     def __init__(self,num_channel:int, support_batch):
         super(Classifier,self).__init__()
         self.num_channel = num_channel
@@ -43,7 +43,7 @@ class Classifier(nn.Module):
         if self.num_channel ==4 :
             return self._forward(x.getARGB(), x.getLidar(), x.getThermal(),target, dataset=dataset)
         return x
-    def adaptTo(self,dataset):
+    def adaptTo(self,dataset:ClassificationDataset):
         print("Adapting to ",dataset.getName())
         return self
     def eval(self):
@@ -64,48 +64,59 @@ class Classifier(nn.Module):
         return self
     def register(name:str,objClass) -> None:
         Classifier.registered_classifiers[name]=objClass
-    def named(name:str):
-        c:Classifier= Classifier.registered_classifiers[name]()
+    def named(name:str) -> "Classifier":
+        c= Classifier.registered_classifiers[name]()
         return c
-    def getAllRegisteredDetectors() -> Dict[str,type]:
+    def getAllRegisteredDetectors() -> Dict[str,Type["Classifier"]]:
         return dict(Classifier.registered_classifiers)
-    def calculateLoss(self,sample:Sample)->torch.Tensor:
+    def calculateLoss(self,sample:Union[Sample, List[Sample]])->torch.Tensor:
         huber = torch.nn.HuberLoss().to(self.device)
 
+        result = self.forward(sample)
+        if isinstance(sample,Sample):
+            return huber.forward(result.confidences.to(self.device), sample.classification.confidences.to(self.device))
+        return sum([
+            huber.forward(a.confidences.to(self.device), b.classification.confidences.to(self.device))
+            for a,b in zip(result,sample)
+        ])
 
 class TorchVisionClassifier(Classifier):
     model:torch.nn.Module
-    def __init__(self, initiator,w, num_classes=None):
+    def __init__(self, initiator,w, num_classes=None, **kwargs):
         super(TorchVisionClassifier,self).__init__(3,True)
         self.initiator = initiator
         self.w=w
+        self.kwargs=kwargs
         if num_classes is not None:
-            self.model:torch.nn.Module = initiator(num_classes=num_classes)
+            self.model:torch.nn.Module = initiator(num_classes=num_classes, **kwargs)
         else:
-            self.model = initiator(weights=w)
+            self.model = initiator(weights=w,**kwargs)
         self.model.eval()
         self.dataset = ClassificationDataset.named("IMAGENET1K_V1")
     def adaptTo(self,dataset) -> "TorchVisionClassifier":
         if self.dataset != dataset.getName():
             print("Torchvision model adapting to ",dataset.getName())
-            newModel = TorchVisionClassifier(self.initiator,self.w, num_classes=len(dataset.classesList()) )
+            newModel = TorchVisionClassifier(self.initiator,self.w, num_classes=len(dataset.classesList()), **self.kwargs) 
             try:
                 newModel.load_state_dict(self.state_dict(),strict=False)
             except:
                 pass
             print("New dataset has ",len(dataset.classesList()),"classes")
-            newModel.dataset = dataset.getName()
+            newModel.kwargs = self.kwargs
+            newModel.initiator = self.initiator
+            newModel.w = self.w
+            newModel.dataset = dataset
             return newModel
         else:
             return self
     def _forward(self, rgb:Union[torch.Tensor,List[torch.Tensor]],lidar:torch.Tensor,thermal:torch.Tensor, target=None, dataset=None) -> Union[Classification,List[Classification]]:
         if isinstance(rgb, List):
             input = rgb
-            rgb = torch.cat([t.unsqueeze(0) for t in rgb],0)
-            output = self.model(rgb)
+            rgb = torch.cat([t.unsqueeze(0) for t in rgb],0).to(self.device)
+            output = self.model.to(self.device).forward(rgb)
             return [Classification(output[i],self.dataset) for i in range(len(input))]
 
-        output = self.model(rgb.unsqueeze(0))
+        output = self.model(rgb.unsqueeze(0)).to(self.device)
         c = Classification(output[0],self.dataset)
         return c
 
@@ -118,17 +129,15 @@ class TorchVisionClassifier(Classifier):
         super(TorchVisionClassifier,self).to(device)
         self.model = self.model.to(device)
         return self
-    def calculateLoss(self,sample:Sample):
-        losses= self.forward(sample, sample)
-        return losses
    
 class TorchVisionClassifierInitiator():
-    def __init__(self,initiator,w):
+    def __init__(self,initiator,w, **kwargs):
         self.initiator = initiator
         self.w=w
+        self.kwargs = kwargs
         pass
     def __call__(self):
-        return TorchVisionClassifier(self.initiator,self.w)
+        return TorchVisionClassifier(self.initiator,self.w,None, **self.kwargs)
 
 TorchVisionClassifier.register("alexnet", TorchVisionClassifierInitiator(torchvision.models.alexnet, torchvision.models.AlexNet_Weights.IMAGENET1K_V1))
 TorchVisionClassifier.register("densenet121", TorchVisionClassifierInitiator(torchvision.models.densenet121, torchvision.models.DenseNet121_Weights.IMAGENET1K_V1))
@@ -149,8 +158,8 @@ TorchVisionClassifier.register("efficientnet_b5", TorchVisionClassifierInitiator
 TorchVisionClassifier.register("efficientnet_b6", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b6, torchvision.models.EfficientNet_B6_Weights.IMAGENET1K_V1))
 TorchVisionClassifier.register("efficientnet_b7", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b7, torchvision.models.EfficientNet_B7_Weights.IMAGENET1K_V1))
 
-TorchVisionClassifier.register("googlenet", TorchVisionClassifierInitiator(torchvision.models.googlenet, torchvision.models.GoogLeNet_Weights.IMAGENET1K_V1))
-TorchVisionClassifier.register("inception_v3", TorchVisionClassifierInitiator(torchvision.models.inception_v3, torchvision.models.Inception_V3_Weights.IMAGENET1K_V1))
+TorchVisionClassifier.register("googlenet", TorchVisionClassifierInitiator(torchvision.models.googlenet, torchvision.models.GoogLeNet_Weights.IMAGENET1K_V1, init_weights=False))
+TorchVisionClassifier.register("inception_v3", TorchVisionClassifierInitiator(torchvision.models.inception_v3, torchvision.models.Inception_V3_Weights.IMAGENET1K_V1, init_weights=False))
 TorchVisionClassifier.register("vit_l_32", TorchVisionClassifierInitiator(torchvision.models.vit_l_32, torchvision.models.ViT_L_32_Weights.IMAGENET1K_V1))
 TorchVisionClassifier.register("vit_b_16", TorchVisionClassifierInitiator(torchvision.models.vit_b_16, torchvision.models.ViT_B_16_Weights.IMAGENET1K_V1))
 TorchVisionClassifier.register("vit_b_32", TorchVisionClassifierInitiator(torchvision.models.vit_b_32, torchvision.models.ViT_B_32_Weights.IMAGENET1K_V1))

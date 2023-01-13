@@ -18,7 +18,7 @@ class Size:
 
 
 class Sample:
-    img : torch.Tensor
+    _img : torch.Tensor
     _thermal : torch.Tensor
     _lidar : torch.Tensor
     detection: "Detection"
@@ -31,7 +31,7 @@ class Sample:
         self._img = None
         self._thermal = None
         self._lidar = None
-        #self.img = torch.zeros(3,640,640)
+        #self._img = torch.zeros(3,640,640)
         pass
     def Example() -> "Sample":
         s = Sample()
@@ -49,8 +49,8 @@ class Sample:
         shape = self.getRGB().shape[1:]
         return Size(shape[1],shape[0])
     def to(self,device) -> "Sample":
-        if self.img is not None:
-            self.img = self.img.to(device)
+        if self._img is not None:
+            self._img = self._img.to(device)
         if self._thermal is not None:
             self._thermal = self._thermal.to(device)
         if self._lidar is not None:
@@ -62,8 +62,8 @@ class Sample:
         return self
     def clone(self) -> "Sample":
         newSample = Sample()
-        if self.img is not None:
-            newSample.img = self.img.clone()
+        if self._img is not None:
+            newSample._img = self._img.clone()
         if self._thermal is not None:
             newSample._thermal = self._thermal.clone()
         if self._lidar is not None:
@@ -75,17 +75,17 @@ class Sample:
         return newSample
     def scale(self, x=1.0,y=None) -> "Sample":
         if isinstance(x, Size):
-            xFactor = x.w/self.img.shape[2]
-            yFactor = x.h/self.img.shape[1]
+            xFactor = x.w/self._img.shape[2]
+            yFactor = x.h/self._img.shape[1]
         if y is None:
             y = x
         newSample = self
-        if self.img is not None:
-            img = newSample.img.unsqueeze(0)
+        if self._img is not None:
+            img = newSample._img.unsqueeze(0)
             if not isinstance(x, Size):
-                self.img=torch.nn.functional.interpolate(img,scale_factor=(y,x))[0]
+                self._img=torch.nn.functional.interpolate(img,scale_factor=(y,x))[0]
             else:
-                self.img=torch.nn.functional.interpolate(img,size=(x.h,x.w))[0]
+                self._img=torch.nn.functional.interpolate(img,size=(x.h,x.w))[0]
 
         if self._thermal is not None:
             img = newSample._thermal.unsqueeze(0)
@@ -103,9 +103,9 @@ class Sample:
 
     def setImage(self,img) -> "Sample":
         if isinstance(img,np.ndarray):
-            self.img = torch.from_numpy(img)
+            self._img = torch.from_numpy(img)
         if isinstance(img,torch.Tensor):
-            self.img=img
+            self._img=img
         return self
     def setThermal(self,img)-> "Sample":
         if isinstance(img,np.ndarray):
@@ -114,15 +114,15 @@ class Sample:
             self._thermal=img
         return self 
     def hasImage(self) -> bool:
-        return self.img is not None
+        return self._img is not None
     def isRgb(self) -> bool:
-        return self.hasImage() and self.img.shape[0]==3
+        return self.hasImage() and self._img.shape[0]==3
     def isArgb(self) -> bool:
-        return self.hasImage() and self.img.shape[0]==4
+        return self.hasImage() and self._img.shape[0]==4
     def isGray(self) -> bool:
-        return self.hasImage() and self.img.shape[0]==1
+        return self.hasImage() and self._img.shape[0]==1
     def getImage(self) -> torch.Tensor:
-        return self.img
+        return self._img
     def getRGB(self) -> torch.Tensor:
         if self.isGray():
             img = self.getImage()
@@ -504,6 +504,9 @@ class Classification:
     def to(self,device) -> "Classification":
         self.device = device
         self.confidences = self.confidences.to(device)
+        return self
+    def getConfidence(self)-> float:
+        return self.confidences[self.confidences.argmax().item()].item()
     def getCategory(self)-> int:
         return self.confidences.argmax().item()
     def getCategoryName(self)->str:

@@ -8,14 +8,17 @@ class FiftyOneDataset(ClassificationDataset):
     fodataset: fiftyone.Dataset
     data : List[fiftyone.Sample]
     classes : List[str]
-    
+    name: str
+    a3name: str
 
     def classesList(self) -> List[str]:
         
         return list(self.lazy_load().classes)
     def getId(self,str: str):
         return self.lazy_load().classes.index(str)
-    def getName(self,id):
+    def getName(self,id=None):
+        if id is None:
+            return self.a3name
         return self.lazy_load().classes[id]
     def lazy_load(self):
         if self.fodataset is None:
@@ -23,8 +26,9 @@ class FiftyOneDataset(ClassificationDataset):
             self.data = list(self.fodataset)
             self.classes = self.fodataset.get_classes("classification")
         return self
-    def __init__(self, name:str, **kwargs) -> None:
+    def __init__(self, a3name:str, name:str, **kwargs) -> None:
         super().__init__()
+        self.a3name =a3name
         self.name = name
         self.lazy = kwargs
         self.fodataset = None
@@ -36,25 +40,24 @@ class FiftyOneDataset(ClassificationDataset):
 
     def convert(self,data:fiftyone.Sample)-> Sample:
         s = Sample()
-        s.setImage(torchvision.io.read_image(data.to_dict()["filepath"]))
+        s.setImage(torchvision.io.read_image(data.to_dict()["filepath"]).float()/255.0)
         s.classification = Classification(self.getId(data.to_dict()["ground_truth"]["label"]),self)
         return s
     def __getitem__(self, index: int) -> Classification:
         foSamples = self.lazy_load().data[index]
-        print(foSamples)
-        print(self.__len__)
-
         if isinstance(foSamples,list):
             return [self.convert(x) for x in foSamples]
         return self.convert(foSamples)
 
-ClassificationDataset.register("CIFAR-10[train]", FiftyOneDataset("cifar10", split="train"))
-ClassificationDataset.register("CIFAR-10[test]", FiftyOneDataset("cifar10", split="test"))
-ClassificationDataset.register("CIFAR-10[validation]", FiftyOneDataset("cifar10", split="validation"))
-ClassificationDataset.register("CIFAR-10", FiftyOneDataset("cifar10"))
+FiftyOneDataset("CIFAR-1","cifar10", split="train", max_samples=1).register()
 
-ClassificationDataset.register("CIFAR-100[train]", FiftyOneDataset("cifar100", split="train"))
-ClassificationDataset.register("CIFAR-100[test]", FiftyOneDataset("cifar100", split="test"))
-ClassificationDataset.register("CIFAR-100", FiftyOneDataset("cifar100"))
+FiftyOneDataset("CIFAR-10[train]","cifar10", split="train").register()
+FiftyOneDataset("CIFAR-10[test]","cifar10", split="test").register()
+FiftyOneDataset("CIFAR-10[validation]","cifar10", split="validation").register()
+FiftyOneDataset("CIFAR-10","cifar10").register()
 
-ClassificationDataset.register("Caltech-256", FiftyOneDataset("caltech256"))
+FiftyOneDataset("CIFAR-100[train]","cifar100", split="train").register()
+FiftyOneDataset("CIFAR-100[test]","cifar100", split="test").register()
+FiftyOneDataset("CIFAR-100","cifar100").register()
+
+FiftyOneDataset("Caltech-256","caltech256").register()

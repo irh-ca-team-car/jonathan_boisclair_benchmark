@@ -1,28 +1,30 @@
 
 
-from typing import Dict, List, Tuple
-from ..Sample import Classification
+from typing import Dict, List, Tuple, Union
+from ..Sample import Classification, Sample
 import torch
 class ClassificationDataset:
     def __init__(self) -> None:
         pass
-    def classesList() -> List[str]:
+    def classesList(self) -> List[str]:
         return []
-    def getId(str: str):
+    def getId(self,str: str):
         return 0
-    def getName(id=None):
+    def getName(self,id=None):
         return str(id)
     def isBanned(nameOrId):
         return False
     def __len__(self):
         return len(self.images)
-    def __getitem__(self, index: int) -> Classification:
-        return Classification(torch.Tensor())
+    def __getitem__(self, index: int) -> Sample:
+        return Sample()
 
     datasets: Dict[str,"ClassificationDataset"] = dict()
-    def register(name:str,dataset:"ClassificationDataset", v=None):
-        if isinstance(name,ClassificationDataset):
-            return ClassificationDataset.register(dataset,v)
+    def register(name:Union["ClassificationDataset",str],dataset:Union[None,"ClassificationDataset"]=None):
+        if isinstance(name, ClassificationDataset):
+            name_ = name.getName()
+            dataset = name
+            name = name_
         ClassificationDataset.datasets[name]= dataset
     def named(name:str, name_=None) -> "ClassificationDataset":
         if isinstance(name,ClassificationDataset):

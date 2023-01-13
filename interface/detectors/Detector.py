@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Callable, Dict, List
 import torch
 import torch.nn as nn
 from ..datasets.Sample import Sample
@@ -6,7 +6,7 @@ from .Detection import Detection
 
 
 class Detector(nn.Module):
-    registered_detectors = dict()
+    registered_detectors: Dict[str,Callable[[],"Detector"]] = dict()
     def __init__(self,num_channel:int, support_batch):
         super(Detector,self).__init__()
         self.num_channel = num_channel
@@ -43,12 +43,12 @@ class Detector(nn.Module):
         if self.num_channel ==4 :
             return self._forward(x.getARGB(), x.getLidar(), x.getThermal(),target, dataset=dataset)
         return x
-    def adaptTo(self,dataset):
+    def adaptTo(self,dataset) -> "Detector":
         print("Adapting to ",dataset.getName())
         return self
-    def eval(self):
+    def eval(self) -> "Detector":
         return self
-    def train(self):
+    def train(self) -> "Detector":
         return self
     def save(self,file) ->None:
         torch.save(self.state_dict(),file)
@@ -58,28 +58,22 @@ class Detector(nn.Module):
             self.load_state_dict(state_dict, strict = False)
         except:
             pass
-    def to(self,device:torch.device):
+    def to(self,device:torch.device) -> "Detector":
         super(Detector,self).to(device)
         self.device = device
         return self
     def register(name:str,objClass) -> None:
         Detector.registered_detectors[name]=objClass
-    def named(name:str):
-        c:Detector= Detector.registered_detectors[name]()
+    def named(name:str) -> "Detector":
+        c= Detector.registered_detectors[name]()
         return c
-    def getAllRegisteredDetectors() -> Dict[str,type]:
+    def getAllRegisteredDetectors() -> Dict[str,Callable[[],"Detector"]]:
         return dict(Detector.registered_detectors)
     def calculateLoss(self,sample:Sample)->torch.Tensor:
         ret=self.forward(sample, sample)
         if isinstance(ret,list):
             ret= sum(ret)
         return ret
-
-class GrayScaleDetector(Detector):
-    def __init__(self):
-        super(GrayScaleDetector,self).__init__(1,False)
-    def _forward(self, gray:torch.Tensor,lidar:torch.Tensor,thermal:torch.Tensor, target=None, dataset=None):
-        return Detection()
 
 class TorchVisionDetector(Detector):
     model:torch.nn.Module
@@ -154,10 +148,12 @@ import torchvision
 Detector.register("fasterrcnn_mobilenet_v3_large_320_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn, torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.COCO_V1))
 Detector.register("fasterrcnn_mobilenet_v3_large_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_mobilenet_v3_large_fpn, torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_FPN_Weights.COCO_V1))
 Detector.register("fasterrcnn_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_resnet50_fpn, torchvision.models.detection.FasterRCNN_ResNet50_FPN_Weights.COCO_V1))
-#Detector.register("fasterrcnn_resnet50_fpn_v2",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_resnet50_fpn_v2, torchvision.models.detection.FasterRCNN_ResNet50_FPN_V2_Weights.COCO_V1))
 Detector.register("fcos_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.fcos_resnet50_fpn, torchvision.models.detection.FCOS_ResNet50_FPN_Weights.COCO_V1))
-#Detector.register("keypointrcnn_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.keypointrcnn_resnet50_fpn, torchvision.models.detection.KeypointRCNN_ResNet50_FPN_Weights.COCO_V1))
 Detector.register("retinanet_resnet50_fpn_v2",TorchVisionInitiator(torchvision.models.detection.retinanet_resnet50_fpn_v2, torchvision.models.detection.RetinaNet_ResNet50_FPN_V2_Weights.COCO_V1))
-#Detector.register("maskrcnn_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.maskrcnn_resnet50_fpn, torchvision.models.detection.MaskRCNN_ResNet50_FPN_Weights.COCO_V1))
 Detector.register("ssd",TorchVisionInitiator(torchvision.models.detection.ssd300_vgg16, torchvision.models.detection.SSD300_VGG16_Weights.COCO_V1))
 Detector.register("ssd_lite",TorchVisionInitiator(torchvision.models.detection.ssdlite320_mobilenet_v3_large, torchvision.models.detection.SSDLite320_MobileNet_V3_Large_Weights.COCO_V1.COCO_V1))
+
+#Incompatible for some reasons
+#Detector.register("fasterrcnn_resnet50_fpn_v2",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_resnet50_fpn_v2, torchvision.models.detection.FasterRCNN_ResNet50_FPN_V2_Weights.COCO_V1))
+#Detector.register("keypointrcnn_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.keypointrcnn_resnet50_fpn, torchvision.models.detection.KeypointRCNN_ResNet50_FPN_Weights.COCO_V1))
+#Detector.register("maskrcnn_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.maskrcnn_resnet50_fpn, torchvision.models.detection.MaskRCNN_ResNet50_FPN_Weights.COCO_V1))
