@@ -16,7 +16,7 @@ class Detector(nn.Module):
     def forward(self, x:Sample, target=None, dataset=None) -> Detection:
         if dataset is None:
             from ..datasets.detection import CocoDetection
-            dataset = CocoDetection
+            dataset = CocoDetection()
         if not isinstance(x,Sample) and not isinstance(x,list):
             raise Exception("Argument is not a Sample")
         if isinstance(x,list):
@@ -88,7 +88,7 @@ class TorchVisionDetector(Detector):
         self.model.eval()
         self.dataset = "MS-COCO"
     def adaptTo(self,dataset):
-        if self.dataset != dataset.getName():
+        if self.dataset != dataset:
             print("Torchvision model adapting to ",dataset.getName())
             newModel = TorchVisionDetector(self.initiator,self.w, num_classes=len(dataset.classesList()) )
             try:
@@ -96,7 +96,7 @@ class TorchVisionDetector(Detector):
             except:
                 pass
             print("New dataset has ",len(dataset.classesList()),"classes")
-            newModel.dataset = dataset.getName()
+            newModel.dataset = dataset
             return newModel
         else:
             return self

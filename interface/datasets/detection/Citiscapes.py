@@ -40,9 +40,9 @@ class CitiscapesDetection(DetectionDataset):
 ]
     NoTrainClass = ["void","road","sidewalk","parking","rail track","construction","building","wall","fence","guard rail","bridge","tunnel",
     "object","polegroup","nature","vegetation","terrain","sky","ground","dynamic","static","ego vehicle","out of roi","license plate","rectification border"]
-    def classesList():
+    def classesList(self):
         return list(CitiscapesDetection.CitiscapesClasses)
-    def getId(str:str):
+    def getId(self,str:str):
         import sys
         if str == "train":
             return CitiscapesDetection.getId("on rails")
@@ -54,13 +54,13 @@ class CitiscapesDetection(DetectionDataset):
             print(str,"is not a known category from citiscapes",file=sys.stderr)
             
             return CitiscapesDetection.getId("void")
-    def getName(id=None):
+    def getName(self,id=None):
         if id is None:
             return "Citiscapes"
         if id>=0 and id < len(CitiscapesDetection.CitiscapesClasses):
             return CitiscapesDetection.CitiscapesClasses[id]
         return "void"
-    def isBanned(nameOrId):
+    def isBanned(self,nameOrId):
         if isinstance(nameOrId,str):
             return nameOrId in CitiscapesDetection.NoTrainClass
         else:

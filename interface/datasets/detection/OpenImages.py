@@ -7,7 +7,7 @@ import fiftyone.zoo as foz
 class OpenImagesDetection:
     A1Classes = None
 
-    def classesList():
+    def classesList(self):
         if OpenImagesDetection.A1Classes is None:
             OpenImagesDetection.A1Classes =["void", *foz.load_zoo_dataset(
         "open-images-v6", split="validation", max_samples=0).get_classes("detection")]
@@ -82,7 +82,7 @@ class OpenImagesDetection:
             ]]
         return list(OpenImagesDetection.A1Classes)
 
-    def getId(str: str):
+    def getId(self,str: str):
         import sys
         if OpenImagesDetection.A1Classes is None:
             OpenImagesDetection.classesList()
@@ -92,7 +92,7 @@ class OpenImagesDetection:
             #print(str, "is not a known category from OpenImages", file=sys.stderr)
             return OpenImagesDetection.getId("void")
 
-    def getName(id=None):
+    def getName(self,id=None):
         if OpenImagesDetection.A1Classes is None:
             OpenImagesDetection.classesList()
         if id is None or isinstance(id, OpenImagesDetection):
@@ -101,7 +101,7 @@ class OpenImagesDetection:
             return OpenImagesDetection.A1Classes[id]
         return "void"
 
-    def isBanned(nameOrId):
+    def isBanned(self,nameOrId):
         if OpenImagesDetection.A1Classes is None:
             OpenImagesDetection.classesList()
         if isinstance(nameOrId, str):

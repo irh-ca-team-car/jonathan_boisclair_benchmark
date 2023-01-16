@@ -8,9 +8,9 @@ import torchvision.io
 
 class A1Detection(DetectionDataset):
     A1Classes = ["void"	,"traffic signal","car","bike","pedestrian"]
-    def classesList():
+    def classesList(self):
         return list(A1Detection.A1Classes)
-    def getId(str:str):
+    def getId(self,str:str):
         import sys
         if str in A1Detection.A1Classes:
             return A1Detection.A1Classes.index(str)
@@ -18,13 +18,13 @@ class A1Detection(DetectionDataset):
             print(str,"is not a known category from A1",file=sys.stderr)
             
             return A1Detection.getId("void")
-    def getName(id=None):
+    def getName(self,id=None):
         if id is None:
             return "A1"
         if id>=0 and id < len(A1Detection.A1Classes):
             return A1Detection.A1Classes[id]
         return "void"
-    def isBanned(nameOrId):
+    def isBanned(self,nameOrId):
         if isinstance(nameOrId,str):
             return nameOrId == "void"
         else:

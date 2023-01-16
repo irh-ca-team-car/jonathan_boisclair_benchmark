@@ -19,9 +19,9 @@ class A2Group:
 
 class A2Detection(DetectionDataset):
     A2Classes = ["void"	,"traffic signal","car","bike","pedestrian"]
-    def classesList():
+    def classesList(self):
         return list(A2Detection.A2Classes)
-    def getId(str:str):
+    def getId(self,str:str):
         import sys
         if str in A2Detection.A2Classes:
             return A2Detection.A2Classes.index(str)
@@ -29,13 +29,13 @@ class A2Detection(DetectionDataset):
             print(str,"is not a known category from A2",file=sys.stderr)
             
             return A2Detection.getId("void")
-    def getName(id=None):
+    def getName(self,id=None):
         if id is None:
             return "A2"
         if id>=0 and id < len(A2Detection.A2Classes):
             return A2Detection.A2Classes[id]
         return "void"
-    def isBanned(nameOrId):
+    def isBanned(self,nameOrId):
         if isinstance(nameOrId,str):
             return nameOrId == "void"
         else:

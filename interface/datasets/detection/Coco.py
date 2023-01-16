@@ -97,9 +97,9 @@ mscoco = ['__background__',
  'hair drier',
  'toothbrush']
 class CocoDetection(DetectionDataset):
-    def classesList():
+    def classesList(self):
         return list(mscoco)
-    def getId(str:str):
+    def getId(self,str:str):
         import sys
         if str == "train":
             return CocoDetection.getId("on rails")
@@ -111,7 +111,7 @@ class CocoDetection(DetectionDataset):
             print(str,"is not a known category from MSCOCO",file=sys.stderr)
             
             return CocoDetection.getId("void")
-    def getName(id=None):
+    def getName(self,id=None):
         if id is None:
             return "MS-COCO"
         if id>=0 and id < len(mscoco):
@@ -120,12 +120,19 @@ class CocoDetection(DetectionDataset):
         else:
             return str(id)
 
-    def __init__(self, root, annFile) -> None:
-        self.CD = CD(root,annFile=annFile,transform=torchvision.transforms.ToTensor())
+    def __init__(self, root=None, annFile=None) -> None:
+        if root is None or annFile is None:
+            self.CD = None
+        else:
+            self.CD = CD(root,annFile=annFile,transform=torchvision.transforms.ToTensor())
         pass
     def __len__(self):
-        return len(self.CD)
+        if self.CD is not None:
+            return len(self.CD)
+        return 0
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        if self.CD is None:
+            raise StopIteration()
         if isinstance(index,slice):
             values=[]
             if index.step is not None:

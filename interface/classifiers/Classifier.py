@@ -94,7 +94,7 @@ class TorchVisionClassifier(Classifier):
         self.model.eval()
         self.dataset = ClassificationDataset.named("IMAGENET1K_V1")
     def adaptTo(self,dataset) -> "TorchVisionClassifier":
-        if self.dataset != dataset.getName():
+        if self.dataset != dataset:
             print("Torchvision model adapting to ",dataset.getName())
             newModel = TorchVisionClassifier(self.initiator,self.w, num_classes=len(dataset.classesList()), **self.kwargs) 
             try:

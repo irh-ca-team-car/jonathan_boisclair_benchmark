@@ -114,7 +114,7 @@ for dname,dataset in datasets:
     print([name for (name, det) in models])
 
     for i, (name, det) in enumerate(models):
-        model: Detector = det.adaptTo(dataset.__class__).to(device)
+        model: Detector = det.adaptTo(dataset).to(device)
         
         
         model.train()
@@ -155,7 +155,7 @@ for dname,dataset in datasets:
             values = values[-1]
             del cocoSamp
             cocoSamp :Sample = cocoSamp_
-            detections = model.forward(cocoSamp, dataset=dataset.__class__)
+            detections = model.forward(cocoSamp, dataset=dataset)
             workImage = values.clone()
             workImage = cocoSamp.detection.onImage(
                 workImage, colors=[(255, 0, 0)])

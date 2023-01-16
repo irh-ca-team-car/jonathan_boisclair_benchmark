@@ -4,13 +4,13 @@ from ..Sample import Sample
 class DetectionDataset:
     def __init__(self) -> None:
         pass
-    def classesList() -> List[str]:
+    def classesList(self) -> List[str]:
         return []
-    def getId(str: str):
+    def getId(self,str: str):
         return 0
-    def getName(id=None):
+    def getName(self,id=None):
         return str(id)
-    def isBanned(nameOrId):
+    def isBanned(self,nameOrId):
         return False
     def __len__(self):
         return len(self.images)
