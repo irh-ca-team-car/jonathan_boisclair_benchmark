@@ -16,11 +16,123 @@ class Size:
     def __repr__(self) -> str:
         return "["+str(self.w)+"x"+str(self.h)+"]"
 
+class LidarSample:
+    # stored in X,Y,Z,I,Ring, R,G,B,A,T
+    _lidar : torch.Tensor
+    def to(self,device) -> "LidarSample":
+        self._lidar = self._lidar.to(device)
+        return self
+    def fromXYZ(XYZ : torch.Tensor) -> "LidarSample":
+        X = XYZ[0:1,:]
+        Y = XYZ[1:2,:]
+        Z = XYZ[2:3,:]
+
+        return LidarSample.fromXYZIRingRGBAT(X,Y,Z,None,None,None,None,None,None,None)
+    def fromXYZI(XYZ : torch.Tensor) -> "LidarSample":
+        X = XYZ[0:1,:]
+        Y = XYZ[1:2,:]
+        Z = XYZ[2:3,:]
+        I = XYZ[3:4,:]
+
+        return LidarSample.fromXYZIRingRGBAT(X,Y,Z,I,None,None,None,None,None,None)
+    def fromXYZIRing(XYZ : torch.Tensor) -> "LidarSample":
+        X = XYZ[0:1,:]
+        Y = XYZ[1:2,:]
+        Z = XYZ[2:3,:]
+        I = XYZ[3:4,:]
+        Ring = XYZ[4:5,:]
+
+        return LidarSample.fromXYZIRingRGBAT(X,Y,Z,I,Ring,None,None,None,None,None)
+
+    def fromXYZIRingRGBAT(X : torch.Tensor,Y : torch.Tensor,Z : torch.Tensor,I : torch.Tensor,Ring : torch.Tensor,R : torch.Tensor,G : torch.Tensor,B : torch.Tensor, A : torch.Tensor, T : torch.Tensor) -> "LidarSample":
+        zeros = torch.zeros(X.shape[0],1)
+        if I is None:
+            I = zeros
+        if Ring is None:
+            Ring = zeros
+        if R is None:
+            R = zeros
+        if G is None:
+            G = zeros
+        if B is None:
+            B = zeros
+        if A is None:
+            A = zeros
+        if T is None:
+            T = zeros
+
+        sample = LidarSample()
+        sample._lidar = torch.cat([X,Y,Z,I,Ring,R,G,B,A,T],1)
+        return sample
+
+    def XYZ(self) -> torch.Tensor:
+        X = self._lidar[:,0:1]
+        Y = self._lidar[:,1:2]
+        Z = self._lidar[:,2:3]
+        return torch.cat([X,Y,Z],1)
+    def XYZI(self) -> torch.Tensor:
+        X = self._lidar[:,0:1]
+        Y = self._lidar[:,1:2]
+        Z = self._lidar[:,2:3]
+        I = self._lidar[:,3:4]
+        return torch.cat([X,Y,Z,I],1)
+    def XYZIR(self) -> torch.Tensor:
+        X = self._lidar[:,0:1]
+        Y = self._lidar[:,1:2]
+        Z = self._lidar[:,2:3]
+        I = self._lidar[:,3:4]
+        R = self._lidar[:,4:5]
+        return torch.cat([X,Y,Z,I,R],1)
+    def XYZRGB(self) -> torch.Tensor:
+        X = self._lidar[:,0:1]
+        Y = self._lidar[:,1:2]
+        Z = self._lidar[:,2:3]
+        R = self._lidar[:,5:6]
+        G = self._lidar[:,6:7]
+        B = self._lidar[:,7:8]
+        return torch.cat([X,Y,Z,R,G,B],1)
+    def XYZRGBA(self) -> torch.Tensor:
+        X = self._lidar[:,0:1]
+        Y = self._lidar[:,1:2]
+        Z = self._lidar[:,2:3]
+        R = self._lidar[:,5:6]
+        G = self._lidar[:,6:7]
+        B = self._lidar[:,7:8]
+        A = self._lidar[:,8:9]
+        return torch.cat([X,Y,Z,R,G,B,A],1)
+    def XYZRGBPacked(self) -> torch.Tensor:
+        X = self._lidar[:,0:1]
+        Y = self._lidar[:,1:2]
+        Z = self._lidar[:,2:3]
+        R = (self._lidar[:,5:6] * 256).byte().float()
+        G = (self._lidar[:,6:7] * 256).byte().float()
+        B = (self._lidar[:,7:8] * 256).byte().float()
+        RGB = R *256 *256 + G*256 + B
+        return torch.cat([X,Y,Z,RGB],1)
+    def XYZRGBAT(self) -> torch.Tensor:
+        X = self._lidar[:,0:1]
+        Y = self._lidar[:,1:2]
+        Z = self._lidar[:,2:3]
+        R = self._lidar[:,5:6]
+        G = self._lidar[:,6:7]
+        B = self._lidar[:,7:8]
+        A = self._lidar[:,8:9]
+        T = self._lidar[:,9:10]
+        return torch.cat([X,Y,Z,R,G,B,A,T],1)
+    def XYZRGBT(self) -> torch.Tensor:
+        X = self._lidar[:,0:1]
+        Y = self._lidar[:,1:2]
+        Z = self._lidar[:,2:3]
+        R = self._lidar[:,5:6]
+        G = self._lidar[:,6:7]
+        B = self._lidar[:,7:8]
+        T = self._lidar[:,9:10]
+        return torch.cat([X,Y,Z,R,G,B,T],1)
 
 class Sample:
     _img : torch.Tensor
     _thermal : torch.Tensor
-    _lidar : torch.Tensor
+    _lidar : LidarSample
     detection: "Detection"
     classification: "Classification"
    
@@ -149,7 +261,7 @@ class Sample:
 
     def hasLidar(self) -> bool:
         return self._lidar is not None
-    def getLidar(self) -> torch.Tensor:
+    def getLidar(self) -> LidarSample:
         if self.hasLidar():
             return self._lidar
         return None
