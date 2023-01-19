@@ -91,6 +91,11 @@ class LidarSample:
         G = self._lidar[:,6:7]
         B = self._lidar[:,7:8]
         return torch.cat([X,Y,Z,R,G,B],1)
+    def RGB(self) -> torch.Tensor:
+        R = self._lidar[:,5:6]
+        G = self._lidar[:,6:7]
+        B = self._lidar[:,7:8]
+        return torch.cat([R,G,B],1)
     def XYZRGBA(self) -> torch.Tensor:
         X = self._lidar[:,0:1]
         Y = self._lidar[:,1:2]
@@ -132,6 +137,7 @@ class LidarSample:
         import open3d as o3d
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(self.XYZ().detach().cpu().numpy())
+        pcd.colors = o3d.utility.Vector3dVector(self.RGB().detach().cpu().numpy())
         o3d.visualization.draw_geometries([pcd],
                                         zoom=0.3412,
                                         front=[0.4257, -0.2125, -0.8795],
