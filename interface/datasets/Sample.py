@@ -128,6 +128,15 @@ class LidarSample:
         B = self._lidar[:,7:8]
         T = self._lidar[:,9:10]
         return torch.cat([X,Y,Z,R,G,B,T],1)
+    def view(self):
+        import open3d as o3d
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(self.XYZ().detach().cpu().numpy())
+        o3d.visualization.draw_geometries([pcd],
+                                        zoom=0.3412,
+                                        front=[0.4257, -0.2125, -0.8795],
+                                        lookat=[0, 0,0],
+                                        up=[1,0,0])
 
 class Sample:
     _img : torch.Tensor

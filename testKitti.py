@@ -7,4 +7,4 @@ dataset = KittiMultiviewDetection("train", dataset_dir="/media/boiscljo/LinuxDat
 sample = dataset[0]
 print(sample)
 print(sample.detection)
-#print(sample.getLidar().XYZ().shape)
+print(sample.getLidar().view())
