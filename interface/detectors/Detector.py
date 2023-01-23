@@ -155,6 +155,7 @@ try:
     Detector.register("ssd_lite",TorchVisionInitiator(torchvision.models.detection.ssdlite320_mobilenet_v3_large, weights=torchvision.models.detection.SSDLite320_MobileNet_V3_Large_Weights.COCO_V1.COCO_V1))
 except BaseException as e:
     print("Seems like weights are not implemented, are you using a old pytorch version?",e)
+    Detector.register("fasterrcnn_resnet50_fpn_v2",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_resnet50_fpn_v2, pretrained=True))
     Detector.register("fasterrcnn_mobilenet_v3_large_320_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn, pretrained=True))
     Detector.register("fasterrcnn_mobilenet_v3_large_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_mobilenet_v3_large_fpn, pretrained=True))
     Detector.register("fasterrcnn_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_resnet50_fpn, pretrained=True))
