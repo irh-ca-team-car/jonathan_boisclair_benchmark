@@ -1,3 +1,4 @@
+import math
 from typing import Dict, List, Tuple, Union
 import torch
 import torchvision
@@ -327,6 +328,13 @@ class Box2d:
 
     def __repr__(self) -> str:
         return self.__str__()
+class Quaternion():
+    def __init__(self,tensor) -> None:
+        self.x = tensor[0]
+        self.y = tensor[1]
+        self.z = tensor[2]
+        self.w = tensor[3]
+
 class Box3d:
     x: float
     y: float
@@ -337,6 +345,9 @@ class Box3d:
     c: float
     cf: float
     cn: str
+    quat: torch.Tensor
+    center: torch.Tensor
+    size: torch.Tensor
     def scale(self,x=1.0,y=1.0, z=1.0) -> "Box3d":
         newBox = Box3d()
         newBox.x = self.x*x
@@ -348,16 +359,57 @@ class Box3d:
         newBox.c = self.c
         newBox.cn = self.cn
         newBox.cf = self.cf
+        newBox.quat = self.quat.clone()
+        newBox.center = self.center.clone()
+        newBox.size = self.size.clone()
         return newBox
+   
 
     def __init__(self) -> None:
         self.x = self.y = self.w = self.h = self.z = self.d = 0
         self.c = 0
         self.cf = 0
         self.cn = ""
+        self.quat = torch.tensor([0,0,0,1.0])
+        self.center = torch.zeros(3)
+        self.size = torch.zeros(3)
+    def Quat(self, value:torch.Tensor=None)-> torch.Tensor:
+        if value is not None:
+            self.quat = value
+        return self.quat
+    def RPY(self, value:torch.Tensor=None)-> torch.Tensor:
+        if value is not None:
+            cr = math.cos(value[0] * 0.5)
+            sr = math.sin(value[0] * 0.5)
+            cp = math.cos(value[1] * 0.5)
+            sp = math.sin(value[1] * 0.5)
+            cy = math.cos(value[2] * 0.5)
+            sy = math.sin(value[2] * 0.5)
+
+            self.quat[3] = cr * cp * cy + sr * sp * sy
+            self.quat[0] = sr * cp * cy - cr * sp * sy
+            self.quat[1] = cr * sp * cy + sr * cp * sy
+            self.quat[2] = cr * cp * sy - sr * sp * cy
+
+        ret = torch.Tensor(3)
+        q = Quaternion(self.quat)
+        sinr_cosp = 2 * (q.w * q.x + q.y * q.z)
+        cosr_cosp = 1 - 2 * (q.x * q.x + q.y * q.y)
+        ret[0] = math.atan2(sinr_cosp, cosr_cosp)
+
+        #pitch (y-axis rotation)
+        sinp = math.sqrt(1 + 2 * (q.w * q.y - q.x * q.z))
+        cosp = math.sqrt(1 - 2 * (q.w * q.y - q.x * q.z))
+        ret[1] = 2 * math.atan2(sinp, cosp) - math.pi / 2
+
+        #yaw (z-axis rotation)
+        siny_cosp = 2 * (q.w * q.z + q.x * q.y)
+        cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
+        ret[2] = math.atan2(siny_cosp, cosy_cosp)
+        return ret
 
     def __str__(self) -> str:
-        return f"Box3d[c:{self.x},y:{self.y},z:{self.z},w:{self.w},h:{self.h},d:{self.d},class:{self.c},confidence{self.cf}]"
+        return f"Box3d[RPY:{self.RPY()},center:{self.center},size:{self.size},class:{self.cn}#{self.c},confidence:{self.cf}]"
 
     def __repr__(self) -> str:
         return self.__str__()

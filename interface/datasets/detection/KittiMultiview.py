@@ -135,7 +135,9 @@ class KittiMultiviewDetection:
                     center = _3d["location"]
                     rotation = _3d["rotation"]
                     size = _3d["dimensions"]
-
+                    box.RPY(torch.tensor(rotation))
+                    box.size = torch.tensor(size)
+                    box.center = torch.tensor(center)
                     from scipy.spatial.transform import Rotation
                     q = np.array(rotation)
                     rotation = Rotation.from_euler('xyz',q)

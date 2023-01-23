@@ -7,7 +7,7 @@ import os
 import json
 import torchvision.io
 import numpy as np
-
+import torch
 class CitiscapesGroup:
     def __init__(self):
         self.gt = None
@@ -188,6 +188,10 @@ class CitiscapesDetection(DetectionDataset):
                 center = _3d["center"]
                 rotation = _3d["rotation"]
                 size = _3d["dimensions"]
+
+                box.Quat(torch.tensor(rotation))
+                box.size = torch.tensor(size)
+                box.center = torch.tensor(center)
 
                 from scipy.spatial.transform import Rotation
                 q = np.array(rotation)
