@@ -1,2 +1,5 @@
 from .ClassificationDataset import ClassificationDataset
-from .FiftyOneDataset import FiftyOneDataset
+try:
+    from .FiftyOneDataset import FiftyOneDataset
+except:
+    pass

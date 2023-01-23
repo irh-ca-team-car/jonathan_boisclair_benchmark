@@ -1,5 +1,6 @@
+import fiftyone
+import fiftyone.zoo
 from interface.detectors.Detector import Detector
-import fiftyone.zoo as foz
-import fiftyone as fo
-
+from interface.classifiers.Classifier import Classifier
 Detector.named("ssd_lite")
+Classifier.named("alexnet")
