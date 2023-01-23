@@ -77,20 +77,20 @@ class Detector(nn.Module):
 
 class TorchVisionDetector(Detector):
     model:torch.nn.Module
-    def __init__(self, initiator,w, num_classes=None):
+    def __init__(self, initiator, num_classes=None, **kwarg):
         super(TorchVisionDetector,self).__init__(3,True)
         self.initiator = initiator
-        self.w=w
+        self.kwarg = kwarg
         if num_classes is not None:
-            self.model:torch.nn.Module = initiator(num_classes=num_classes)
+            self.model:torch.nn.Module = initiator(num_classes=num_classes, **self.kwarg)
         else:
-            self.model = initiator(weights=w)
+            self.model = initiator(**self.kwarg)
         self.model.eval()
         self.dataset = "MS-COCO"
     def adaptTo(self,dataset):
         if self.dataset != dataset:
             print("Torchvision model adapting to ",dataset.getName())
-            newModel = TorchVisionDetector(self.initiator,self.w, num_classes=len(dataset.classesList()) )
+            newModel = TorchVisionDetector(self.initiator,num_classes=len(dataset.classesList(), self.kwarg) )
             try:
                 newModel.load_state_dict(self.state_dict(),strict=False)
             except:
@@ -135,24 +135,34 @@ class TorchVisionDetector(Detector):
         return losses
    
 class TorchVisionInitiator():
-    def __init__(self,initiator,w):
+    def __init__(self,initiator, **kwarg):
         self.initiator = initiator
-        self.w=w
+        self.kwarg = kwarg
         pass
     def __call__(self):
-        return TorchVisionDetector(self.initiator,self.w)
+        return TorchVisionDetector(self.initiator,**self.kwarg)
     
 from functools import partial
 import torchvision
 
-Detector.register("fasterrcnn_mobilenet_v3_large_320_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn, torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.COCO_V1))
-Detector.register("fasterrcnn_mobilenet_v3_large_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_mobilenet_v3_large_fpn, torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_FPN_Weights.COCO_V1))
-Detector.register("fasterrcnn_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_resnet50_fpn, torchvision.models.detection.FasterRCNN_ResNet50_FPN_Weights.COCO_V1))
-Detector.register("fcos_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.fcos_resnet50_fpn, torchvision.models.detection.FCOS_ResNet50_FPN_Weights.COCO_V1))
-Detector.register("retinanet_resnet50_fpn_v2",TorchVisionInitiator(torchvision.models.detection.retinanet_resnet50_fpn_v2, torchvision.models.detection.RetinaNet_ResNet50_FPN_V2_Weights.COCO_V1))
-Detector.register("ssd",TorchVisionInitiator(torchvision.models.detection.ssd300_vgg16, torchvision.models.detection.SSD300_VGG16_Weights.COCO_V1))
-Detector.register("ssd_lite",TorchVisionInitiator(torchvision.models.detection.ssdlite320_mobilenet_v3_large, torchvision.models.detection.SSDLite320_MobileNet_V3_Large_Weights.COCO_V1.COCO_V1))
-
+try:
+    Detector.register("fasterrcnn_mobilenet_v3_large_320_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn, weights=torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.COCO_V1))
+    Detector.register("fasterrcnn_mobilenet_v3_large_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_mobilenet_v3_large_fpn, weights=torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_FPN_Weights.COCO_V1))
+    Detector.register("fasterrcnn_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_resnet50_fpn, weights=torchvision.models.detection.FasterRCNN_ResNet50_FPN_Weights.COCO_V1))
+    Detector.register("fcos_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.fcos_resnet50_fpn, weights=torchvision.models.detection.FCOS_ResNet50_FPN_Weights.COCO_V1))
+    Detector.register("retinanet_resnet50_fpn_v2",TorchVisionInitiator(torchvision.models.detection.retinanet_resnet50_fpn_v2, weights=torchvision.models.detection.RetinaNet_ResNet50_FPN_V2_Weights.COCO_V1))
+    Detector.register("ssd",TorchVisionInitiator(torchvision.models.detection.ssd300_vgg16, weights=torchvision.models.detection.SSD300_VGG16_Weights.COCO_V1))
+    Detector.register("ssd_lite",TorchVisionInitiator(torchvision.models.detection.ssdlite320_mobilenet_v3_large, weights=torchvision.models.detection.SSDLite320_MobileNet_V3_Large_Weights.COCO_V1.COCO_V1))
+except _ as e:
+    print("Seems like weights are not implemented, are you using a old pytorch version?",e)
+    Detector.register("fasterrcnn_mobilenet_v3_large_320_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn, pretained=True))
+    Detector.register("fasterrcnn_mobilenet_v3_large_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_mobilenet_v3_large_fpn, pretained=True))
+    Detector.register("fasterrcnn_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_resnet50_fpn, pretained=True))
+    Detector.register("fcos_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.fcos_resnet50_fpn, pretained=True))
+    Detector.register("retinanet_resnet50_fpn_v2",TorchVisionInitiator(torchvision.models.detection.retinanet_resnet50_fpn_v2, pretained=True))
+    Detector.register("ssd",TorchVisionInitiator(torchvision.models.detection.ssd300_vgg16, pretained=True))
+    Detector.register("ssd_lite",TorchVisionInitiator(torchvision.models.detection.ssdlite320_mobilenet_v3_large, pretained=True))
+   
 #Incompatible for some reasons
 #Detector.register("fasterrcnn_resnet50_fpn_v2",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_resnet50_fpn_v2, torchvision.models.detection.FasterRCNN_ResNet50_FPN_V2_Weights.COCO_V1))
 #Detector.register("keypointrcnn_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.keypointrcnn_resnet50_fpn, torchvision.models.detection.KeypointRCNN_ResNet50_FPN_Weights.COCO_V1))
