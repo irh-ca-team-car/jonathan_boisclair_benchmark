@@ -5,7 +5,7 @@ import numpy
 class CVAdapter:
     def __init__(self) -> None:
         self.device = torch.device("cpu")
-    def toOpenCV(self,tensor:torch.Tensor) ->cv2.Mat:
+    def toOpenCV(self,t:torch.Tensor) ->cv2.Mat:
         if len(t.shape) ==4:
             t=t[0]
         t = t.cpu().permute(1, 2, 0)
