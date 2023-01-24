@@ -311,7 +311,6 @@ class Sample:
             np_ = cv2.cvtColor(np_, cv2.COLOR_BGR2RGB)
         elif t.shape[0] ==1:
             np_ = t[0].detach().numpy()
-        print(np_.shape)
         
         cv2.imshow(name, np_)
         # for i in range(30):
