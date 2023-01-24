@@ -13,3 +13,5 @@
 #node convert-flir.mjs
 
 pip3 install torch torchvision torchaudio --upgrade
+
+pip3 install -qr https://raw.githubusercontent.com/hustvl/YOLOP/main/requirements.txt
