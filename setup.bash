@@ -15,3 +15,4 @@
 pip3 install torch torchvision torchaudio --upgrade
 
 pip3 install -qr https://raw.githubusercontent.com/hustvl/YOLOP/main/requirements.txt
+pip3 install -qr https://raw.githubusercontent.com/ultralytics/yolov5/master/requirements.txt  # install dependencies
