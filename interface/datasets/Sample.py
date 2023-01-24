@@ -71,6 +71,11 @@ class LidarSample:
         Y = self._lidar[:,1:2]
         Z = self._lidar[:,2:3]
         return torch.cat([X,Y,Z],1)
+    def ZYX(self) -> torch.Tensor:
+        X = self._lidar[:,0:1]
+        Y = self._lidar[:,1:2]
+        Z = self._lidar[:,2:3]
+        return torch.cat([Z,Y,X],1)
     def XYZI(self) -> torch.Tensor:
         X = self._lidar[:,0:1]
         Y = self._lidar[:,1:2]
@@ -137,7 +142,7 @@ class LidarSample:
     def view(self):
         import open3d as o3d
         pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(self.XYZ().detach().cpu().numpy())
+        pcd.points = o3d.utility.Vector3dVector(self.ZYX().detach().cpu().numpy())
         pcd.colors = o3d.utility.Vector3dVector(self.RGB().detach().cpu().numpy())
         o3d.visualization.draw_geometries([pcd],
                                         zoom=0.3412,
@@ -295,7 +300,30 @@ class Sample:
         self.detection = detection
         return self
     
+    @staticmethod
+    def show(t: torch.Tensor, wait: bool = False, name="Image"):
+        import cv2
+        if len(t.shape) == 4:
+            t = t[0]
+        if t.shape[0] ==3:
+            t = t.cpu().permute(1, 2, 0)
+            np_ = t.detach().numpy()
+            np_ = cv2.cvtColor(np_, cv2.COLOR_BGR2RGB)
+        elif t.shape[0] ==1:
+            np_ = t[0].detach().numpy()
+        print(np_.shape)
+        
+        cv2.imshow(name, np_)
+        # for i in range(30):
 
+        if wait:
+            while True:
+                cv2.imshow(name, np_)
+                k = cv2.waitKey(1)
+                if k == 27:  # Esc key to stop
+                    break
+        else:
+            cv2.waitKey(1)
 class Box2d:
     x: float
     y: float

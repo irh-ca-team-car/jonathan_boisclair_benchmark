@@ -1,6 +1,7 @@
 from ..datasets import Sample
 import cv2
 import torch
+import numpy
 class CVAdapter:
     def __init__(self) -> None:
         self.device = torch.device("cpu")
@@ -15,11 +16,14 @@ class CVAdapter:
         self.device = device
         return self
     def toPytorch(self,np: cv2.Mat) -> torch.Tensor:
-        tensor = torch.from_numpy(np)
-        b = tensor[:,:,0].unsqueeze(0)
-        g = tensor[:,:,1].unsqueeze(0)
-        r = tensor[:,:,2].unsqueeze(0)
-        return (torch.cat([r,g,b],0).float()/255).to(self.device)
+        if np.dtype == numpy.uint16:
+            return torch.tensor(np.astype(numpy.float32)).unsqueeze(0).float() / 2**16
+        if np.dtype == numpy.uint8:
+            tensor = torch.from_numpy(np)
+            b = tensor[:,:,0].unsqueeze(0)
+            g = tensor[:,:,1].unsqueeze(0)
+            r = tensor[:,:,2].unsqueeze(0)
+            return (torch.cat([r,g,b],0).float()/255).to(self.device)
 
 class VideoCapture:
     def __init__(self,path) -> None:

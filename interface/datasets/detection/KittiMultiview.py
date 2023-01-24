@@ -115,9 +115,9 @@ class KittiMultiviewDetection:
             pcd = o3d.io.read_point_cloud(pcdPath)
             pcl_xyz=(torch.tensor(np.asarray(pcd.points)))
             pcl_rgb=(torch.tensor(np.asarray(pcd.colors)))
-            z = pcl_xyz[:,0:1]
+            x = pcl_xyz[:,0:1]
             y = pcl_xyz[:,1:2]
-            x = pcl_xyz[:,2:3]
+            z = pcl_xyz[:,2:3]
             r = pcl_rgb[:,0:1]
             g = pcl_rgb[:,1:2]
             b = pcl_rgb[:,2:3]
