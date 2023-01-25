@@ -1,17 +1,38 @@
+from typing import List
 import torch
-from interface.datasets import Sample, Size
+from interface.datasets import Sample, Size, Detection
+from interface.datasets.Batch import Batch
 from interface.adapters.OpenCV import CVAdapter
 from torchvision.transforms import ToPILImage
+from interface.datasets.detection.A2 import A2Detection
+import cv2
 # Model
-model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, trust_repo=True, autoshape=True).cpu()
+model = torch.hub.load('ultralytics/yolov5', 'yolov5x', pretrained=True, trust_repo=True, autoshape=True).cpu()
 
+print(model.__class__)
 
 from interface.detectors.YoloV5 import YoloV5Detector
 
-model = YoloV5Detector().to("cpu")
-result = model([Sample.Example(),Sample.Example()])
+model = YoloV5Detector().to("cpu").train()
+dataset = A2Detection("data/FLIR_CONVERTED/all.csv")
 
-print(result)
+optimizer = torch.optim.Adamax(model.parameters(), lr=2e-3)
+
+for samp in Batch.of(dataset,4):
+    optimizer.zero_grad()
+    loss = (model.calculateLoss(samp))
+    print(loss)
+    if not torch.isnan(loss):
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+    with torch.no_grad():
+        result:List[Detection] = model(samp)
+        Sample.show(result[0].onImage(samp[0]),False)
+        cv2.waitKey(1)
+
+
+
 exit(0)
 # Images
 imgs = ['https://ultralytics.com/images/zidane.jpg']  # batch of images ,'https://ultralytics.com/images/zidane.jpg'
