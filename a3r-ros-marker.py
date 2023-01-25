@@ -1,14 +1,19 @@
 from interface.datasets import Sample
-from interface.datasets.detection import CocoDetection
+from interface.datasets.Coco import CocoDetection
 import rclpy
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 import math
 from visualization_msgs.msg import MarkerArray, Marker
+from tf2_msgs.msg import TFMessage
 from std_msgs.msg import Header
 from sensor_msgs.msg import Image, CompressedImage
+from geometry_msgs.msg import TransformStamped
+from builtin_interfaces.msg import Time
 from interface.detectors.Detector import Detector
 from cv_bridge import CvBridge
 import torch
+import torchvision
 import cv2
 def tensorToCV2(t:torch.Tensor):
     if len(t.shape) ==4:
@@ -60,6 +65,8 @@ class PredictionPub(Node):
         self.running=False
         
     def callback_image(self, data:Image):
+        with torch.no_grad():
+            pass
         if self.running:
             return
         self.running=True
@@ -73,7 +80,16 @@ class PredictionPub(Node):
         s.setImage((torch.cat([r,g,b],0).float()/255).to(device))
         det = self.model.forward(s).filter(0.25).NMS_Pytorch()
 
+        
+
         outputMsg = MarkerArray()
+
+        obs = Marker()
+        obs.id = 0
+        obs.action = Marker.DELETEALL
+        outputMsg.markers.append(obs)
+
+        height = 1.5
         for f in det.boxes2d:
             obs = Marker()
             if CocoDetection.getName(f.c) in ["person"]:
@@ -82,31 +98,35 @@ class PredictionPub(Node):
                 obs.color.r = 0.0
                 obs.color.g = 1.0
                 obs.color.b = 0.0
+                height = 1.5
                 #obs.type=3 
             elif CocoDetection.getName(f.c) in ["bicycle","motorcycle"]:
                 obs.type = obs.CUBE
                 obs.color.r = 0.0
                 obs.color.g = 1.0
                 obs.color.b = 1.0
+                height = 2.5
                 #obs.type=4
-            elif CocoDetection.getName(f.c) in ["car","truck","train","bus"]:
+            elif CocoDetection.getName(f.c) in ["car","truck","bus"]:
                 obs.type = Marker.MESH_RESOURCE
-                obs.mesh_resource = "package://kia_soul/Man_with_suit.stl"
+                obs.mesh_resource = "package://kia_soul/soul.dae"
                 obs.color.r = 0.0
                 obs.color.g = 1.0
                 obs.color.b = 0.0
+                height = 3
                 #obs.type=5 
             elif CocoDetection.getName(f.c) in ["stop sign","fire hydrant"]:
                 obs.type = obs.CUBE
                 obs.color.r = 1.0
                 obs.color.g = 0.0
                 obs.color.b = 0.0
+                height = 0.5
                 #obs.type = 0
             else:
                 continue
             obs.header.frame_id = "car"
             angleV = (f.h)*70.0 /s.size().h
-            circ = 360 * 1.5 / angleV
+            circ = 360 * height / angleV
             r = circ / (2*3.14)
             distance= -r
             obs.pose.position.y = float(distance)

@@ -1,0 +1,99 @@
+{
+	"extrinsicfile": [
+		{
+			"frameid": "novatel",
+			"childframeid": "velodyne128",
+			"filepath": "velodyne128_novatel_extrinsics.yaml",
+			"enable": true
+		},
+		{
+			"frameid": "localization",
+			"childframeid": "novatel",
+			"filepath": "novatel_localization_extrinsics.yaml",
+			"enable": true
+		},
+		{
+			"frameid": "velodyne128",
+			"childframeid": "front_6mm",
+			"filepath": "front_6mm_extrinsics.yaml",
+			"enable": true
+		},
+		{
+			"frameid": "velodyne128",
+			"childframeid": "front_12mm",
+			"filepath": "front_12mm_extrinsics.yaml",
+			"enable": true
+		},
+		{
+			"frameid": "velodyne128",
+			"childframeid": "radar_front",
+			"filepath": "radar_front_extrinsics.yaml",
+			"enable": true
+		},
+		{
+			"frameid": "velodyne128",
+			"childframeid": "radar_rear",
+			"filepath": "radar_rear_extrinsics.yaml",
+			"enable": true
+		},{
+			"frameid": "velodyne128",
+			"childframeid": "mynteye",
+			"filepath": "mynteye.yaml",
+			"enable": true
+		},
+		{
+			"frameid": "velodyne128",
+			"childframeid": "map",
+			"filepath": "zero.yaml",
+			"enable": true
+		},
+		{
+			"frameid": "velodyne128",
+			"childframeid": "rslidar",
+			"filepath": "rslidar.yaml",
+			"enable": true
+		},
+		{
+			"frameid": "velodyne128",
+			"childframeid": "zed_front",
+			"filepath": "zed_centre.yaml",
+			"enable": true
+		},
+		{
+			"frameid": "velodyne128",
+			"childframeid": "zed_fl",
+			"filepath": "zed_fl.yaml",
+			"enable": true
+		},
+		{
+			"frameid": "velodyne128",
+			"childframeid": "zed_fr",
+			"filepath": "zed_fr.yaml",
+			"enable": true
+		},
+		{
+			"frameid": "velodyne128",
+			"childframeid": "zed_bl",
+			"filepath": "zed_bl.yaml",
+			"enable": true
+		},
+		{
+			"frameid": "velodyne128",
+			"childframeid": "zed_br",
+			"filepath": "zed_br.yaml",
+			"enable": true
+		},
+		{
+			"frameid": "world",
+			"childframeid": "campus",
+			"filepath": "world_to_campus.yaml",
+			"enable": true
+		},
+		{
+			"frameid": "localization",
+			"childframeid": "car",
+			"filepath": "novatel_to_soul.yaml",
+			"enable": true
+		}
+	]
+}
