@@ -1,5 +1,5 @@
 from interface.datasets import Sample
-from interface.datasets.Coco import CocoDetection
+from interface.datasets.detection.Coco import CocoDetection
 import rclpy
 from rclpy.node import Node
 from rclpy.parameter import Parameter
