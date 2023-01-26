@@ -54,8 +54,8 @@ class PredictionPub(Node):
         self.sub = self.create_subscription(Image, self.input, self.callback_image, 10)
         self.input2 =  '/zed_wrapper_front/left/image_rect_color'
         self.sub2 = self.create_subscription(Image, self.input2, self.callback_image, 10)
-        self.input2 =  '/output_image'
-        self.sub3 = self.create_subscription(Image, self.input2, self.callback_image, 10)
+        self.input2 =  '/output_image/compressed'
+        self.sub3 = self.create_subscription(CompressedImage, self.input2, self.callback_image, 10)
         self.pub = self.create_publisher(MarkerArray, self.output, 10)
         self.pubviz = self.create_publisher(Image, "/apollo/perception/obstacles/viz", 10)
         self.pubvizcom = self.create_publisher(CompressedImage, "/apollo/perception/obstacles/viz/compressed", 10)
@@ -66,12 +66,16 @@ class PredictionPub(Node):
         self.running=False
         
     def callback_image(self, data:Image):
+        
         with torch.no_grad():
             pass
         if self.running:
             return
         self.running=True
-        opencvImg = CvBridge().imgmsg_to_cv2(data, "bgr8")
+        if isinstance(data,CompressedImage):
+            opencvImg=CvBridge().compressed_imgmsg_to_cv2(data,"bgr8")
+        else:
+            opencvImg = CvBridge().imgmsg_to_cv2(data, "bgr8")
         tensor = torch.from_numpy(opencvImg)
         b = tensor[:,:,0].unsqueeze(0)
         g = tensor[:,:,1].unsqueeze(0)
@@ -87,12 +91,14 @@ class PredictionPub(Node):
 
         obs = Marker()
         obs.id = 0
+        obs.header.frame_id = "car"
         obs.action = Marker.DELETEALL
         outputMsg.markers.append(obs)
 
         height = 1.5
         for f in det.boxes2d:
             obs = Marker()
+            obs.header.frame_id = "car"
             if CocoDetection.getName(f.c) in ["person"]:
                 obs.type = Marker.MESH_RESOURCE
                 obs.mesh_resource = "package://kia_soul/Man_with_suit.stl"
@@ -100,6 +106,8 @@ class PredictionPub(Node):
                 obs.color.g = 1.0
                 obs.color.b = 0.0
                 height = 1.5
+                if f.w > f.h:
+                    height = 0.75
                 #obs.type=3 
             elif CocoDetection.getName(f.c) in ["bicycle","motorcycle"]:
                 obs.type = obs.CUBE
@@ -149,7 +157,6 @@ class PredictionPub(Node):
             obs.action = obs.ADD
             #marker.pose.position.z = data.position.z
             obs.id = len(outputMsg.markers)
-
             outputMsg.markers.append(obs)
 
         self.running=False

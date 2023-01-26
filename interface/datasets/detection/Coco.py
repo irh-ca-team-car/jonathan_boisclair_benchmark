@@ -112,6 +112,8 @@ class CocoDetection(DetectionDataset):
             
             return CocoDetection.getId("void")
     def getName(self,id=None):
+        if self is not None and not isinstance(self,CocoDetection):
+            return CocoDetection.getName(None,self)
         if id is None:
             return "MS-COCO"
         if id>=0 and id < len(mscoco):

@@ -9,7 +9,7 @@ Original file is located at
 
 import rclpy
 from cv_bridge import CvBridge
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 import cv2
 from rclpy.node import Node
 from threading import Thread
@@ -80,6 +80,7 @@ class ImagePublisher(Node):
         self.exchange = exchange
         self.bridge = CvBridge()
         self.image_pub = self.create_publisher(Image,"/output_image", 1)
+        self.image_pub_com = self.create_publisher(CompressedImage,"/output_image/compressed", 1)
         self.timer = self.create_timer(1/30.0,self.tmr)
         #self.vid = cv2.VideoCapture("/dev/video0")
 
@@ -93,6 +94,7 @@ class ImagePublisher(Node):
                 frame = cv2.scaleAdd(left,0.5,right)
                 frame = cv2.resize(left, (480, 352))
                 self.image_pub.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8"))
+                self.image_pub_com.publish(self.bridge.cv2_to_compressed_imgmsg(frame, "jpeg"))
             except:
                 pass
 
