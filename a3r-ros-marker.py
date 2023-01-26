@@ -14,6 +14,7 @@ from interface.detectors.Detector import Detector
 from cv_bridge import CvBridge
 import torch
 import torchvision
+import zstd
 import cv2
 def tensorToCV2(t:torch.Tensor):
     if len(t.shape) ==4:
@@ -57,7 +58,7 @@ class PredictionPub(Node):
         self.sub3 = self.create_subscription(Image, self.input2, self.callback_image, 10)
         self.pub = self.create_publisher(MarkerArray, self.output, 10)
         self.pubviz = self.create_publisher(Image, "/apollo/perception/obstacles/viz", 10)
-        self.pubvizcom = self.create_publisher(CompressedImage, "/apollo/perception/obstacles/viz/com", 10)
+        self.pubvizcom = self.create_publisher(CompressedImage, "/apollo/perception/obstacles/viz/compressed", 10)
         self.stamp = Header().stamp
         #self.model : Detector = Detector.named("retinanet_resnet50_fpn_v2").to(device)
         self.model : Detector = Detector.named("ssd_lite").to(device)
@@ -156,6 +157,9 @@ class PredictionPub(Node):
         img = det.onImage(s)
         imgMsg = CvBridge().cv2_to_imgmsg(tensorToCV2(img),"bgr8")
         self.pubviz.publish(imgMsg)
+     
+        imgMsg = CvBridge().cv2_to_compressed_imgmsg(tensorToCV2(img),"jpeg")
+        self.pubvizcom.publish(imgMsg)
 
 def main (args=None):
     rclpy.init(args=args)
