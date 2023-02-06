@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Type
 import torch.nn as nn
 import torch
 from ..datasets import Sample, Size
@@ -24,13 +24,13 @@ class ITI(nn.Module):
         if isinstance(name,ITI):
             return ITI.register(name,clz)
         ITI.registered[name]=clz
-    def named(name):
+    def named(name) -> Type["ITI"]:
         if isinstance(name,ITI):
             return ITI.named(name)
         return ITI.registered[name]
     def allRegistered():
         return dict(ITI.registered)
-    def loss(self,s1:Sample, s2:Sample):
+    def loss(self,s1:Sample, s2:Sample) -> torch.Tensor:
         device = s1.getRGB().device
         img1 = s1.getRGB()
         img2=  s2.getRGB()

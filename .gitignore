@@ -14,3 +14,4 @@ FLIR_CONVERTED
 node_modules
 package*.json
 *.pt
+*.csv

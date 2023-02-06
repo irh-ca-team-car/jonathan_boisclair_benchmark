@@ -1,19 +1,28 @@
-from typing import Dict, List, Set, Tuple
+from typing import Callable, Dict, List, Set, Tuple
 from ..detectors.Detection import Detection
 import torch
 from torchvision.ops import box_area, box_convert, box_iou
 
 
 class MultiImageAveragePrecision:
+    filter: Callable[[int],bool]
     def __init__(self, gt: List[Detection], val: List[Detection]):
         self.gt = gt
         self.val = val
+        self.filter = None
         if len(gt) != len(val):
             raise Exception("Lenght must match")
     def __call__(self, iou:float) -> float:
         return self.calc(iou)
     def calc(self, iou: float) -> Dict[int,float]:
         keys: Set[int] = set()
+        if self.filter is not None:
+            for i in range(len(self.gt)): 
+                gt = self.gt[i]
+                det = self.val[i]
+                gt.boxes2d = [box for box in gt.boxes2d if self.filter(box.c)]
+                det.boxes2d = [box for box in gt.boxes2d if self.filter(box.c)]
+
         for i in range(len(self.gt)):
             gt = self.gt[i]
             det = self.val[i]
@@ -21,7 +30,7 @@ class MultiImageAveragePrecision:
                 keys.add(d.c)
             for d in det.boxes2d:
                 keys.add(d.c)
-        
+       
         ret = dict()
 
         for key in keys:
@@ -63,7 +72,9 @@ class MultiImageAveragePrecision:
             data = self.calc(iou)
         else:
             data = self.coco()
-        return sum(data.values())/len(data)
+        if len(data)>0:
+            return sum(data.values())/len(data)
+        return 0.0
         
         
 

@@ -115,7 +115,7 @@ await Promise.all(Object.values(data).map(async element => {
             await fsp.appendFile(path.join(LABELS_DIR, num + ".txt"), FLIR_CATEGORIES[x.category_id] + " " + x.bbox.join(" ") + "\r\n")
         }))
     } catch (ex) {
-        console.error("error",ex);
+        //console.error("error",ex);
     }
 
 }))
@@ -152,7 +152,7 @@ await Promise.all(Object.values(dataVal).map(async element => {
             await fsp.appendFile(path.join(LABELS_DIR, num + ".txt"), FLIR_CATEGORIES[x.category_id] + " " + x.bbox.join(" ") + "\r\n")
         }))
     } catch (ex){
-        console.error("error",ex);
+        //console.error("error",ex);
     }
 
 }))

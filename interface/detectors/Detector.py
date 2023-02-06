@@ -89,13 +89,15 @@ class TorchVisionDetector(Detector):
         self.dataset = "MS-COCO"
     def adaptTo(self,dataset):
         if self.dataset != dataset:
-            print("Torchvision model adapting to ",dataset.getName())
-            newModel = TorchVisionDetector(self.initiator,num_classes=len(dataset.classesList(), self.kwarg) )
+            if "weights" in self.kwarg:
+                del self.kwarg["weights"]
+            if "pretrained" in self.kwarg:
+                del self.kwarg["pretrained"]
+            newModel = TorchVisionDetector(self.initiator,num_classes=len(dataset.classesList()), **self.kwarg )
             try:
                 newModel.load_state_dict(self.state_dict(),strict=False)
             except:
                 pass
-            print("New dataset has ",len(dataset.classesList()),"classes")
             newModel.dataset = dataset
             return newModel
         else:

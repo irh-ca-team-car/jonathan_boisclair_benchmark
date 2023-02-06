@@ -5,17 +5,40 @@ import torch
 import torchvision.transforms
 class YoloV5Detector(Detector):
     model:torch.nn.Module
-    def __init__(self,  **kwarg):
+    def __init__(self, model='yolov5s', **kwarg):
         super(YoloV5Detector,self).__init__(3,True)
         self.kwarg = kwarg
-        self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, trust_repo=True, autoshape=True)
+        self.model_name = model
+
+        RANK = os.environ.get("RANK",None)
+        os.environ["RANK"]="10"
+        self.model = torch.hub.load('ultralytics/yolov5', model, pretrained=True, trust_repo=True, autoshape=True,**self.kwarg)
+        self.model.conf = 0.05
+        if RANK is not None:
+            os.environ["RANK"] = RANK
         self.model.eval()
         self.dataset = "MS-COCO"
         self.loss = None
     def adaptTo(self,dataset):
         if self.dataset != dataset:
-            print("Torchvision model adapting to ",dataset.getName())
-            self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, trust_repo=True, autoshape=True, classes=len(dataset.classesList()))
+            RANK = os.environ.get("RANK",None)
+            os.environ["RANK"]="10"
+            if "weights" in self.kwarg:
+                del self.kwarg["weights"]
+            if "pretrained" in self.kwarg:
+                del self.kwarg["pretrained"]
+            state_dict = self.model.state_dict()
+            autoshape = self.model.__class__
+            self.model = torch.hub.load('ultralytics/yolov5', self.model_name, trust_repo=True, autoshape=True, classes=len(dataset.classesList()),**self.kwarg)
+            if self.model.__class__ != autoshape:
+                self.model = autoshape(self.model)
+            try:
+                self.model.load_state_dict(state_dict,strict=False)
+            except:
+                pass
+            self.model.conf = 0.0000005
+            if RANK is not None:
+                os.environ["RANK"] = RANK
             return self
         else:
             return self
@@ -68,8 +91,11 @@ class YoloV5Detector(Detector):
 
         self.train()
         with torch.cuda.amp.autocast(True):
-            tensorOut = self.model.model(rgb)
-          
+            try:
+                tensorOut = self.model.model(rgb)
+            except:
+                tensorOut = self.model(rgb)
+
             targets= []
             for img in range(rgb.shape[0]):
                 detectionImages : Detection = sample[img].detection
@@ -87,6 +113,22 @@ class YoloV5Detector(Detector):
 
             
         return losses
+
+class YoloV5Initiator():
+    def __init__(self,initiator, **kwarg):
+        self.initiator = initiator
+        self.kwarg = kwarg
+        pass
+    def __call__(self):
+        return YoloV5Detector(self.initiator,**self.kwarg)
+
+import os
+
+Detector.register("yolov5n",YoloV5Initiator('yolov5n',_verbose=False))
+Detector.register("yolov5s",YoloV5Initiator('yolov5s',_verbose=False))
+Detector.register("yolov5m",YoloV5Initiator('yolov5m',_verbose=False))
+Detector.register("yolov5l",YoloV5Initiator('yolov5l',_verbose=False))
+Detector.register("yolov5x",YoloV5Initiator('yolov5x',_verbose=False))
 
 import torch
 import torch.nn as nn
@@ -247,7 +289,10 @@ class ComputeLoss:
             'mixup': 0.0  ,# image mixup (probability)
             'copy_paste': 0.0  ,# segment copy-paste (probability)
         }
-        m = model.model.model.model.model[-1] # Detect() module
+        try:
+            m = model.model.model.model.model[-1] # Detect() module
+        except:
+            m = model.model.model.model[-1] # Detect() module
 
         hyp['box'] *= 3 / m.nl  # scale to layers
         hyp['cls'] *= m.nc / 80 * 3 / m.nl  # scale to classes and layers

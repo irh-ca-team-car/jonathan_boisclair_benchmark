@@ -112,14 +112,15 @@ class A2Detection(DetectionDataset):
             box = Box2d()
             line = line.strip()
             line = line.split()
-            box.c = int(line[0])+1
-            box.cn = A2Detection.getName(box.c)
-            box.x = float(line[1])* img.shape[2]
-            box.y = float(line[2])* img.shape[1]
-            box.w = float(line[3])* img.shape[2]
-            box.h = float(line[4])* img.shape[1]
+            if line[0] != "undefined":
+                box.c = int(line[0])+1
+                box.cn = A2Detection.getName(box.c)
+                box.x = float(line[1])* img.shape[2]
+                box.y = float(line[2])* img.shape[1]
+                box.w = float(line[3])* img.shape[2]
+                box.h = float(line[4])* img.shape[1]
 
-            det.boxes2d.append(box)
+                det.boxes2d.append(box)
         
         citiSamp.setTarget(det)
 
