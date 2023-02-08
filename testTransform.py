@@ -28,11 +28,11 @@ rgb = sample.detection.onImage(sample)
 
 sample.show(rgb,True)
 
-randomCrop = RandomCutTransform(100,100,0.2,False)
+randomCrop = RandomCutTransform(100,100,0.2,True)
 transform2 = ScaleTransform(640,640)
+rotation = RandomRotateTransform([x for x in range(360)])
 
-rt = RandomRotateTransform([x for x in range(360)])
 for i in range(100):
-    sample2 = interface.transforms.apply(sample,[rt,randomCrop, transform2, autoContrast])
+    sample2 = interface.transforms.apply(sample,[rotation,randomCrop, transform2, autoContrast])
     rgb = sample2.detection.onImage(sample2)
     sample.show(rgb,True)

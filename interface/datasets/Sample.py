@@ -218,7 +218,7 @@ class Sample:
             newSample.classification = self.classification.clone()
         return newSample
     def crop(self,new_x:int,new_y:int,new_width:int,new_height:int, overlap_to_keep=0.2) -> "Sample":
-        newSample = Sample()
+        newSample = self.clone()
         if self._img is not None:
             new_image = self._img[:,new_y:(new_height+new_y),new_x:(new_width+new_x)]
             newSample.setImage(new_image)

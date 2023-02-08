@@ -14,6 +14,10 @@ def random_cut(sample: Union[Sample,List[Sample]],min_width:int,min_height:int, 
             return sample.crop(new_x,new_y,new_width,new_height, overlap_to_keep)
         else:
             while True:
+                new_width=random.randint(min_width,sample.size().w)
+                new_height=random.randint(min_height,sample.size().h)
+                new_x  = random.randint(0,sample.size().w - new_width)
+                new_y  = random.randint(0,sample.size().h - new_height)
                 new_sample = sample.crop(new_x,new_y,new_width,new_height, overlap_to_keep)
                 if len(new_sample.detection.boxes2d) > 0:
                     return new_sample
