@@ -11,8 +11,8 @@ configs = [
     ("VCAE6","yolov5n"),
     ("Identity","yolov5n"),
     ("DenseFuse","yolov5n"),
-    ("Identity","ssd"),
-    ("Identity","fasterrcnn_resnet50_fpn"),
+    #("Identity","ssd"),
+    #("Identity","fasterrcnn_resnet50_fpn"),
 ]
 
 datasets : List[Tuple[str,DetectionDataset]] = [
@@ -61,10 +61,10 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
         else:
             model.train()
             optimizer = torch.optim.Adamax(model.parameters())
-            epochs = tqdm(range(5), leave=False)
+            epochs = tqdm(range(20), leave=False)
             for b in epochs:
                 for cocoSamp in tqdm(Batch.of(datasets[1][1],16), leave=False):
-                    cocoSamp =[samp.scale(Size(352,352)).to(device) for samp in cocoSamp]
+                    cocoSamp =[samp.scale(Size(640,640)).to(device) for samp in cocoSamp]
                     with torch.no_grad():
                         values=iti_impl.forward(cocoSamp)
                     losses: torch.Tensor = (model.calculateLoss(values))
@@ -113,7 +113,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
 
         with torch.no_grad():
             for sample in tqdm(dataset_eval, leave=False, desc="Evaluating mAP"):
-                sample = sample.scale(Size(352,352)).to(device)
+                sample = sample.scale(Size(640,640)).to(device)
                 ground_truths.append(sample.detection)
                 detected = model(iti_impl(sample))
                 detections.append(detected)

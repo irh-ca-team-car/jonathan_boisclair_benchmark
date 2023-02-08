@@ -1,4 +1,5 @@
 
+from interface.datasets.detection import DetectionDataset
 from .Detector import Detector
 from ..datasets import Sample, Box2d,Detection, Size
 import torch
@@ -17,7 +18,7 @@ class YoloV5Detector(Detector):
         if RANK is not None:
             os.environ["RANK"] = RANK
         self.model.eval()
-        self.dataset = "MS-COCO"
+        self.dataset = DetectionDataset.registered()[0][1]
         self.loss = None
     def adaptTo(self,dataset):
         if self.dataset != dataset:
