@@ -21,7 +21,7 @@ def random_cut(sample: Union[Sample,List[Sample]],min_width:int,min_height:int, 
     if isinstance(sample,list):
         return [scaleValue(x) for x in sample]
     return scaleValue(sample)
-def RandomCutTransform():
+class RandomCutTransform():
     def __init__(self,min_width:int,min_height:int, overlap_to_keep=0.2, need_box = True):
         self.min_width = min_width
         self.min_height = min_height

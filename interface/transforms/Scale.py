@@ -17,3 +17,10 @@ def scale(sample: Union[Sample,List[Sample]],width:Union[int,Size],height:Union[
     if isinstance(sample,list):
         return [scaleValue(x) for x in sample]
     return scaleValue(sample)
+class ScaleTransform():
+    def __init__(self,width:Union[int,Size],height:Union[int,None]=None, stretch=True):
+        self.width = width
+        self.height = height
+        self.stretch = stretch
+    def __call__(self,sample: Union[Sample,List[Sample]]):
+        return scale(sample,self.width, self.height,self.stretch)

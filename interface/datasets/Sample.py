@@ -16,6 +16,8 @@ class Size:
         self.h=h
     def __repr__(self) -> str:
         return "["+str(self.w)+"x"+str(self.h)+"]"
+    def div(self,value):
+        return Size(self.w/value,self.h/value)
 
 class LidarSample:
     # stored in X,Y,Z,I,Ring, R,G,B,A,T
@@ -218,13 +220,13 @@ class Sample:
     def crop(self,new_x:int,new_y:int,new_width:int,new_height:int, overlap_to_keep=0.2) -> "Sample":
         newSample = Sample()
         if self._img is not None:
-            new_image = self._image[:,new_y:(new_height+new_y),new_x:(new_width+new_x)]
+            new_image = self._img[:,new_y:(new_height+new_y),new_x:(new_width+new_x)]
             newSample.setImage(new_image)
         if self._thermal is not None:
             new_image = self._thermal[:,new_y:(new_height+new_y),new_x:(new_width+new_x)]
             newSample.setThermal(new_image)
-
-        newSample.setTarget(self.detection.crop(new_x,new_y,new_width,new_height,overlap_to_keep))
+        if self.detection is not None:
+            newSample.setTarget(self.detection.crop(new_x,new_y,new_width,new_height,overlap_to_keep))
         newSample._lidar = self._lidar
         
         return newSample
@@ -719,16 +721,23 @@ class Detection:
         newDet = Detection()
 
         for box2d in self.boxes2d:
-            new_x = math.max(box2d.x, new_x) - new_x
-            new_y = math.max(box2d.y, new_y) - new_y
-            new_x2 = math.min(box2d.x+box2d.w, new_x + new_width) - new_x
-            new_y2 = math.min(box2d.y+box2d.h, new_y + new_height) - new_y
+            new_x_box = max(box2d.x, new_x) - new_x
+            new_y_box = max(box2d.y, new_y) - new_y
+
+            old_x2 = box2d.x + box2d.w
+            old_y2 = box2d.y + box2d.h
+
+            loss_left = new_x - box2d.x if new_x > box2d.x else 0
+            loss_top = new_y - box2d.y if new_y > box2d.y else 0
+
+            loss_right = max(0,old_x2- (new_x+new_width))
+            loss_bottom= max(0,old_y2- (new_y+new_height))
 
             newBox = box2d.scale()
-            newBox.x = new_x
-            newBox.y= new_y
-            newBox.w = new_x2 - new_x
-            newBox.h = new_y2 - new_y
+            newBox.x = new_x_box
+            newBox.y= new_y_box
+            newBox.w = box2d.w - loss_left - loss_right
+            newBox.h = box2d.h - loss_top - loss_bottom
 
             if newBox.w < 0 or newBox.h < 0:
                 continue
