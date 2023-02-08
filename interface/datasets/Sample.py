@@ -179,8 +179,17 @@ class Sample:
         s.setImage(img)
         return s
     def size(self) ->Size:
-        shape = self.getRGB().shape[1:]
+        if self._img is not None:
+            shape = self.getRGB().shape[1:]
+        else: 
+            thermal_ = self.getThermal()
+            if len(thermal_.shape) ==2:
+                shape = thermal_.shape
+            else:
+                shape = thermal_.shape[1:]
+            
         return Size(shape[1],shape[0])
+
     def to(self,device) -> "Sample":
         if self._img is not None:
             self._img = self._img.to(device)
@@ -206,10 +215,23 @@ class Sample:
         if self.classification is not None:
             newSample.classification = self.classification.clone()
         return newSample
+    def crop(self,new_x:int,new_y:int,new_width:int,new_height:int, overlap_to_keep=0.2) -> "Sample":
+        newSample = Sample()
+        if self._img is not None:
+            new_image = self._image[:,new_y:(new_height+new_y),new_x:(new_width+new_x)]
+            newSample.setImage(new_image)
+        if self._thermal is not None:
+            new_image = self._thermal[:,new_y:(new_height+new_y),new_x:(new_width+new_x)]
+            newSample.setThermal(new_image)
+
+        newSample.setTarget(self.detection.crop(new_x,new_y,new_width,new_height,overlap_to_keep))
+        newSample._lidar = self._lidar
+        
+        return newSample
     def scale(self, x=1.0,y=None) -> "Sample":
         if isinstance(x, Size):
-            xFactor = x.w/self._img.shape[2]
-            yFactor = x.h/self._img.shape[1]
+            xFactor = x.w/self.size().w#self._img.shape[2]
+            yFactor = x.h/self.size().h#self._img.shape[1]
         if y is None:
             y = x
         newSample = self
@@ -219,7 +241,6 @@ class Sample:
                 self._img=torch.nn.functional.interpolate(img,scale_factor=(y,x))[0]
             else:
                 self._img=torch.nn.functional.interpolate(img,size=(x.h,x.w))[0]
-
         if self._thermal is not None:
             img = newSample._thermal.unsqueeze(0)
             if not isinstance(x, Size):
@@ -347,8 +368,8 @@ class Box2d:
         newBox.cn = self.cn
         newBox.cf = self.cf
         return newBox
-
-
+    def surface(self):
+        return self.w*self.h
 
     def __str__(self) -> str:
         return f"Box2d[x:{self.x},y:{self.y},w:{self.w},h:{self.h},class:{self.c},confidence:{self.cf}]"
@@ -694,6 +715,29 @@ class Detection:
         #newDetection.boxes2d = newDetection.boxes2d[indices].astype(int)
         newDetection.device = self.device
         return newDetection
+    def crop(self,new_x:int,new_y:int,new_width:int,new_height:int, overlap_to_keep=0.2) -> "Sample":
+        newDet = Detection()
+
+        for box2d in self.boxes2d:
+            new_x = math.max(box2d.x, new_x) - new_x
+            new_y = math.max(box2d.y, new_y) - new_y
+            new_x2 = math.min(box2d.x+box2d.w, new_x + new_width) - new_x
+            new_y2 = math.min(box2d.y+box2d.h, new_y + new_height) - new_y
+
+            newBox = box2d.scale()
+            newBox.x = new_x
+            newBox.y= new_y
+            newBox.w = new_x2 - new_x
+            newBox.h = new_y2 - new_y
+
+            if newBox.w < 0 or newBox.h < 0:
+                continue
+            if newBox.surface() < box2d.surface() * overlap_to_keep:
+                continue
+            newDet.boxes2d.append(newBox)
+
+        newDet.boxes3d = list([b.scale() for b in self.boxes3d])
+        return newDet
 
 class Classification:
     confidences : torch.Tensor
