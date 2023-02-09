@@ -145,6 +145,7 @@ def smart_optimizer(model, name='Adam', lr=0.001, momentum=0.9, decay=1e-5):
  
     return optimizer
 for dname,dataset in datasets:
+    break
     from tqdm import tqdm
     #validation loop
     for b, cocoSamp in enumerate(tqdm(dataset)):
@@ -155,7 +156,7 @@ for dname,dataset in datasets:
         if degenerate_boxes.any():
             print(b)
         pass
-exit(0)
+
 for dname,dataset in datasets:
     from tqdm import tqdm
     # models = [(name, det())
