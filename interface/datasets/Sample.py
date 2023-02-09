@@ -236,24 +236,24 @@ class Sample:
             yFactor = x.h/self.size().h#self._img.shape[1]
         if y is None:
             y = x
-        newSample = self
-        if self._img is not None:
+        newSample = self.clone()
+        if newSample._img is not None:
             img = newSample._img.unsqueeze(0)
             if not isinstance(x, Size):
-                self._img=torch.nn.functional.interpolate(img,scale_factor=(y,x))[0]
+                newSample._img=torch.nn.functional.interpolate(img,scale_factor=(y,x))[0]
             else:
-                self._img=torch.nn.functional.interpolate(img,size=(x.h,x.w))[0]
-        if self._thermal is not None:
+                newSample._img=torch.nn.functional.interpolate(img,size=(x.h,x.w))[0]
+        if newSample._thermal is not None:
             img = newSample._thermal.unsqueeze(0)
             if not isinstance(x, Size):
-                self._thermal=torch.nn.functional.interpolate(img,scale_factor=(y,x))[0]
+                newSample._thermal=torch.nn.functional.interpolate(img,scale_factor=(y,x))[0]
             else:
-                self._thermal=torch.nn.functional.interpolate(img,size=(x.h,x.w))[0]
-        if self.detection is not None:
+                newSample._thermal=torch.nn.functional.interpolate(img,size=(x.h,x.w))[0]
+        if newSample.detection is not None:
             if not isinstance(x, Size):
-                newSample.detection = self.detection.scale(x,y)
+                newSample.detection = newSample.detection.scale(x,y)
             else:
-                newSample.detection = self.detection.scale(xFactor,yFactor)
+                newSample.detection = newSample.detection.scale(xFactor,yFactor)
 
         return newSample
 
@@ -561,9 +561,13 @@ class Detection:
         labels = []
         scores = []
         for box in self.boxes2d:
-            if box.w<1:
+            if box.x<=0:
+                box.x = 0
+            if box.y<=0:
+                box.y = 0
+            if box.w<=1:
                 box.w=2
-            if box.h<1:
+            if box.h<=1:
                 box.h=2
             boxes.append([box.x, box.y, box.x+box.w, box.y+box.h])
             if boxes[-1][2] <= boxes[-1][0]:

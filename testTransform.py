@@ -22,7 +22,6 @@ sample.detection.boxes2d[0].h = 175
 sample.detection.boxes2d[0].c = 1
 sample.detection.boxes2d[0].cn = "car"
 
-autoContrast = AutoContrast()
 
 rgb = sample.detection.onImage(sample)
 
@@ -31,6 +30,7 @@ sample.show(rgb,True)
 randomCrop = RandomCutTransform(100,100,0.2,True)
 transform2 = ScaleTransform(640,640)
 rotation = RandomRotateTransform([x for x in range(360)])
+autoContrast = AutoContrast()
 
 for i in range(100):
     sample2 = interface.transforms.apply(sample,[rotation,randomCrop, transform2, autoContrast])

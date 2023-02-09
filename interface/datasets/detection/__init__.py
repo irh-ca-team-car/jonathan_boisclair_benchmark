@@ -4,3 +4,5 @@ from .A2 import A2Detection
 from .Citiscapes import CitiscapesDetection
 from .Coco import CocoDetection
 from .OpenImages import OpenImagesDetection
+
+DetectionDataset.register("coco-empty",CocoDetection(None,None))

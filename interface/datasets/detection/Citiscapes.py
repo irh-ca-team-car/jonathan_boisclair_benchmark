@@ -45,15 +45,15 @@ class CitiscapesDetection(DetectionDataset):
     def getId(self,str:str):
         import sys
         if str == "train":
-            return CitiscapesDetection.getId("on rails")
+            return self.getId("on rails")
         if str in CitiscapesDetection.CitiscapesClasses:
             return CitiscapesDetection.CitiscapesClasses.index(str)
         else:
             if "group" in str:
-                return CitiscapesDetection.getId(str.replace("group",""))
+                return self.getId(str.replace("group",""))
             print(str,"is not a known category from citiscapes",file=sys.stderr)
             
-            return CitiscapesDetection.getId("void")
+            return self.getId("void")
     def getName(self,id=None):
         if id is None:
             return "Citiscapes"
@@ -64,7 +64,7 @@ class CitiscapesDetection(DetectionDataset):
         if isinstance(nameOrId,str):
             return nameOrId in CitiscapesDetection.NoTrainClass
         else:
-            return CitiscapesDetection.isBanned(CitiscapesDetection.getName(nameOrId))
+            return self.isBanned(self.getName(nameOrId))
 
     images: List[CitiscapesGroup]
     def __init__(self, root=None, mode="train", suffix="8bit.png") -> None:
@@ -131,7 +131,7 @@ class CitiscapesDetection(DetectionDataset):
             objects:List = data["objects"]
             for obj in objects:
                 label = obj["label"]
-                id = CitiscapesDetection.getId(label)
+                id = self.getId(label)
                 polygon = np.array(obj["polygon"])
 
                 x1 = polygon[:,0].min() 
@@ -145,7 +145,7 @@ class CitiscapesDetection(DetectionDataset):
                 box.h =y2-y1
                 box.c = id
                 box.cn = label
-                if not CitiscapesDetection.isBanned(id):
+                if not self.isBanned(id):
                     det.boxes2d.append(box)
         if group.gt is None and group.person is not None:
             f = open(group.gt)
@@ -162,7 +162,7 @@ class CitiscapesDetection(DetectionDataset):
                 box.h =bbox2d[3]
                 box.c = id
                 box.cn = label
-                if not CitiscapesDetection.isBanned(id):
+                if not self.isBanned(id):
                     det.boxes2d.append(box)
 
         if group.box3d is not None:
@@ -172,19 +172,11 @@ class CitiscapesDetection(DetectionDataset):
             objects:List = data["objects"]
             for obj in objects:
                 label = obj["label"]
-                id = CitiscapesDetection.getId(label)
-                bbox2d = obj["2d"]["modal"]
-                box = Box2d()
-                box.x =bbox2d[0]
-                box.y =bbox2d[1]
-                box.w =bbox2d[2]
-                box.h =bbox2d[3]
-                box.c = id
-                box.cn = label
-                if not CitiscapesDetection.isBanned(id):
-                    det.boxes2d.append(box)
+                id = self.getId(label)
+                box = Box3d()
                 _3d = obj["3d"]
 
+                box = Box3d()
                 center = _3d["center"]
                 rotation = _3d["rotation"]
                 size = _3d["dimensions"]
@@ -223,7 +215,6 @@ class CitiscapesDetection(DetectionDataset):
                 minz = rotated_vectors[:,2].min()
                 maxz = rotated_vectors[:,2].max()
 
-                box = Box3d()
                 box.c = id
                 box.cn = label
                 box.x = minx
@@ -233,7 +224,7 @@ class CitiscapesDetection(DetectionDataset):
                 box.w = maxx-minx
                 box.h = maxy-miny
                 box.d = maxz-minz
-                if not CitiscapesDetection.isBanned(id):
+                if not self.isBanned(id):
                     det.boxes3d.append(box)
 
         # for b in ann:

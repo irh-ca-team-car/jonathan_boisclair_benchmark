@@ -4,6 +4,8 @@ from .Detector import Detector
 from ..datasets import Sample, Box2d,Detection, Size
 import torch
 import torchvision.transforms
+from ..transforms import ScaleTransform, RequiresGrad, Cat
+from ..transforms import apply as tf
 class YoloV5Detector(Detector):
     model:torch.nn.Module
     def __init__(self, model='yolov5s', **kwarg):
@@ -18,7 +20,12 @@ class YoloV5Detector(Detector):
         if RANK is not None:
             os.environ["RANK"] = RANK
         self.model.eval()
-        self.dataset = DetectionDataset.registered()[0][1]
+        
+        self.dataset = None #DetectionDataset.registered()[0][1]
+        try:
+            self.dataset = DetectionDataset.named("coco-empty")
+        except:
+            pass
         self.loss = None
     def adaptTo(self,dataset):
         if self.dataset != dataset:
@@ -40,6 +47,7 @@ class YoloV5Detector(Detector):
             self.model.conf = 0.0000005
             if RANK is not None:
                 os.environ["RANK"] = RANK
+            self.dataset = dataset
             return self
         else:
             return self
@@ -51,6 +59,7 @@ class YoloV5Detector(Detector):
         self.eval()
         pandasresult = self.model(rgb).pandas().xyxy
         
+
         result = []
         for pandas in pandasresult:
             detection = Detection()
@@ -62,7 +71,10 @@ class YoloV5Detector(Detector):
                 box.h = row.ymax-row.ymin
                 box.c = row._6
                 box.cf = row.confidence
-                box.cn = row.name
+                try:
+                    box.cn = self.dataset.getName(box.c)
+                except:
+                    box.cn = str(box.c)
                 detection.boxes2d.append(box)
             result.append(detection)
         if not isinstance(rgb,list):
@@ -86,9 +98,13 @@ class YoloV5Detector(Detector):
         if isinstance(sample, Sample):
             sample = [sample]
             rgb = [rgb]
-        rgb = [samp.scale(Size(640,640)) for samp in rgb]
-        rgb = torch.cat([v.getRGB().unsqueeze(0) for v in rgb],0)
-        rgb.requires_grad_(True)
+        transforms = [Cat(), RequiresGrad(True) ]
+        sample = ScaleTransform(Size(640,640))(sample)
+        rgb = tf(sample,transforms)
+        
+        # rgb = scale(sample,Size(640,640))
+        # rgb = torch.cat([v.getRGB().unsqueeze(0) for v in rgb],0)
+        # rgb.requires_grad_(True)
 
         self.train()
         with torch.cuda.amp.autocast(True):

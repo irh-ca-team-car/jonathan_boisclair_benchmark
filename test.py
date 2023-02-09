@@ -8,6 +8,9 @@ import torch
 import cv2
 import pycocotools.coco
 import os
+from interface.transforms import RandomCropAspectTransform, RandomRotateTransform, rotate, AutoContrast
+from interface.transforms import ScaleTransform
+import interface.transforms
 
 dataDir = 'interface/datasets/coco'
 dataType = 'val2014'
@@ -35,14 +38,15 @@ def show(t: torch.Tensor, wait: bool = False):
             k = cv2.waitKey(1)
             if k == 27:  # Esc key to stop
                 break
+            
     else:
-        cv2.waitKey(1)
+        return cv2.waitKey(1)
 
 
 datasets : List[Tuple[str,DetectionDataset]] = [
     #("A1_UQTR_REGULAR",A1Detection("data/attention-data/UQTRR/full.txt")),
     #("A2",A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv")),
-    ("FLIR_CONVERTED",A2Detection("data/FLIR_CONVERTED/all.csv")),
+    #("FLIR_CONVERTED",A2Detection("data/FLIR_CONVERTED/all.csv")),
     # ("OpenImages",OpenImagesDetection(dataset=foz.load_zoo_dataset("open-images-v6",
     #                                                                      split="validation",
     #                                                                      max_samples=1000,
@@ -53,7 +57,7 @@ datasets : List[Tuple[str,DetectionDataset]] = [
     #                                                                          "Car"],
     #                                                                      dataset_name="openimagescar"
     #                                                                      ))),
-    # CitiscapesDetection(mode="train", suffix="8bit.png"),
+    ("CitiscapesDetection_8bit",CitiscapesDetection(mode="train", suffix="8bit.png")),
     #CitiscapesDetection(mode="train", suffix="0.005.png"),
     #CitiscapesDetection(mode="train", suffix="0.01.png"),
     #CitiscapesDetection(mode="train", suffix="0.02.png"),
@@ -67,7 +71,7 @@ datasets : List[Tuple[str,DetectionDataset]] = [
 #dataset = CitiscapesDetection(suffix="0.02.png")
 device="cuda:0"
 itiName = "VCAE6"
-itiName = "DenseFuse"
+itiName = "Identity"
 iti:ITI = ITI.named(itiName)().to(device)
 #iti:ITI = ITI.named("Identity")().to(device)
 itiNeedTraining=True
@@ -104,6 +108,54 @@ if itiNeedTraining:
                 show(output[0].getRGB())
     torch.save(iti.state_dict(), "iti_"+itiName+".pth")
 
+preScale = ScaleTransform(640, 640)
+randomCrop = RandomCropAspectTransform(200,200,0.2,False)
+transform2 = ScaleTransform(480, 352)
+rotation = RandomRotateTransform([0,0,0,0,0,0,0,0,0,90,180,270])
+autoContrast = AutoContrast()
+transforms = [autoContrast,device,preScale,rotation,randomCrop,preScale]
+transforms = [autoContrast,device,preScale]
+def smart_optimizer(model, name='Adam', lr=0.001, momentum=0.9, decay=1e-5):
+    import torch.nn as nn
+    # YOLOv5 3-param group optimizer: 0) weights with decay, 1) weights no decay, 2) biases no decay
+    g = [], [], []  # optimizer parameter groups
+    bn = tuple(v for k, v in nn.__dict__.items() if 'Norm' in k)  # normalization layers, i.e. BatchNorm2d()
+    for v in model.modules():
+        for p_name, p in v.named_parameters(recurse=0):
+            if p_name == 'bias':  # bias (no decay)
+                g[2].append(p)
+            elif p_name == 'weight' and isinstance(v, bn):  # weight (no decay)
+                g[1].append(p)
+            else:
+                g[0].append(p)  # weight (with decay)
+
+    if name == 'Adam':
+        optimizer = torch.optim.Adam(g[2], lr=lr, betas=(momentum, 0.999))  # adjust beta1 to momentum
+    elif name == 'AdamW':
+        optimizer = torch.optim.AdamW(g[2], lr=lr, betas=(momentum, 0.999), weight_decay=0.0)
+    elif name == 'RMSProp':
+        optimizer = torch.optim.RMSprop(g[2], lr=lr, momentum=momentum)
+    elif name == 'SGD':
+        optimizer = torch.optim.SGD(g[2], lr=lr, momentum=momentum, nesterov=True)
+    else:
+        raise NotImplementedError(f'Optimizer {name} not implemented.')
+
+    optimizer.add_param_group({'params': g[0], 'weight_decay': decay})  # add g0 with weight_decay
+    optimizer.add_param_group({'params': g[1], 'weight_decay': 0.0})  # add g1 (BatchNorm2d weights)
+ 
+    return optimizer
+for dname,dataset in datasets:
+    from tqdm import tqdm
+    #validation loop
+    for b, cocoSamp in enumerate(tqdm(dataset)):
+
+        tv = cocoSamp.detection.toTorchVisionTarget()
+        boxes = tv["boxes"]
+        degenerate_boxes = boxes[:, 2:] <= boxes[:, :2]
+        if degenerate_boxes.any():
+            print(b)
+        pass
+exit(0)
 for dname,dataset in datasets:
     from tqdm import tqdm
     # models = [(name, det())
@@ -111,6 +163,7 @@ for dname,dataset in datasets:
     #models = [models[-1]]
     #models = [("EfficientDetector_d0", Detector.named("EfficientDetector_d0"))]
     models : List[Tuple[str,Detector]] = [("retinanet_resnet50_fpn_v2",Detector.named("retinanet_resnet50_fpn_v2"))]
+    models : List[Tuple[str,Detector]] = [("yolov5s",Detector.named("yolov5s")),("yolov5m",Detector.named("yolov5m")),("retinanet_resnet50_fpn_v2",Detector.named("retinanet_resnet50_fpn_v2"))]
     print([name for (name, det) in models])
 
     for i, (name, det) in enumerate(models):
@@ -119,9 +172,12 @@ for dname,dataset in datasets:
         
         model.train()
         tmpModule = torch.nn.ModuleList([model,iti])
-        optimizer = torch.optim.Adamax(tmpModule.parameters(), lr=6e-4)
+
+        optimizer = torch.optim.Adamax(tmpModule.parameters())
+        if "yolo" in name:
+            optimizer =smart_optimizer(tmpModule)
         losses = 0
-        batch = Batch.of(dataset, 1)
+        batch = Batch.of(dataset, 2)
 
         save_name = itiName+"_"+dname+"_"+name+".pth"
         if os.path.exists(save_name):
@@ -129,11 +185,12 @@ for dname,dataset in datasets:
                 tmpModule.load_state_dict(torch.load(save_name, map_location=device), strict=False)
             except:
                 pass
-
-        for b, cocoSamp in enumerate(tqdm(batch)):
+        t = tqdm(batch, leave=True)
+        for b, cocoSamp in enumerate(t):
             #cocoSamp = [c.scale(Size(512, 416)).to(device) for c in cocoSamp]
             #cocoSamp = [c.scale(Size(752, 480)).to(device) for c in cocoSamp]
-            cocoSamp = [c.scale(Size(480, 352)).to(device) for c in cocoSamp]
+            #cocoSamp = [c.scale(Size(480, 352)).to(device) for c in cocoSamp]
+            cocoSamp = interface.transforms.apply(cocoSamp, transforms)
             
             if True:# dataset.__class__.getName() != "MS-COCO":
                 values=iti.forward(cocoSamp)
@@ -143,7 +200,8 @@ for dname,dataset in datasets:
                 optimizer.zero_grad()
                 if not torch.isnan(losses):
                     losses.backward()
-                    tqdm.write(str(losses.item()))
+                    t.desc = name +" "+str(losses.item())
+                    #tqdm.write(str(losses.item()))
                     optimizer.step()
                 optimizer.zero_grad()
                 losses = 0
@@ -151,8 +209,8 @@ for dname,dataset in datasets:
 
             model.eval()
 
-            cocoSamp_ = cocoSamp[-1]
-            values = values[-1]
+            cocoSamp_ = cocoSamp[0]
+            values = values[0]
             del cocoSamp
             cocoSamp :Sample = cocoSamp_
             detections = model.forward(cocoSamp, dataset=dataset)
@@ -160,11 +218,14 @@ for dname,dataset in datasets:
             workImage = cocoSamp.detection.onImage(
                 workImage, colors=[(255, 0, 0)])
             #workImage = detections.filter(0.1).onImage(workImage)
-            workImage = detections.filter(0.3).NMS_Pytorch().onImage(workImage)
+            detections=detections.filter(0.3)
+
+            workImage = detections.NMS_Pytorch().onImage(workImage, colors=[(128, 128, 255)])
             #workImage = detections.filter(0.90).onImage(workImage)
             # for b in detections.boxes2d:
             #    print(b)
-            show(workImage, False)
+            if show(workImage, False) >=0:
+                break
             #show(cocoSamp.detection.onImage(cocoSamp), False)
             model.train()
             cv2.waitKey(100)
