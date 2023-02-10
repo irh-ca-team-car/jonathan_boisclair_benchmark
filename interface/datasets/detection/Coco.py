@@ -123,17 +123,25 @@ class CocoDetection(DetectionDataset):
             return str(id)
 
     def __init__(self, root=None, annFile=None) -> None:
+        self.max=None
         if root is None or annFile is None:
             self.CD = None
         else:
             self.CD = CD(root,annFile=annFile,transform=torchvision.transforms.ToTensor())
         pass
+    def withMax(self,max):
+        self.max = max
+        return self
     def __len__(self):
         if self.CD is not None:
+            if self.max is not None:
+                return min(len(self.CD),self.max)
             return len(self.CD)
         return 0
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         if self.CD is None:
+            raise StopIteration()
+        if self.max is not None and index > self.max:
             raise StopIteration()
         if isinstance(index,slice):
             values=[]

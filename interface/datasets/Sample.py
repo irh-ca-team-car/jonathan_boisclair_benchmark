@@ -18,6 +18,23 @@ class Size:
         return "["+str(self.w)+"x"+str(self.h)+"]"
     def div(self,value):
         return Size(self.w/value,self.h/value)
+    def __div__(self,value):
+        return self.div(value)
+    def __mul__(self,value):
+        return Size(self.w*value,self.h*value)
+
+    def __getitem__(self, x):
+        if x ==0:
+            return self.w
+        if x ==1:
+            return self.h
+        return self.__dict__[x]
+
+    def __iter__(self):
+        return iter(self.__dict__.values())
+
+    def __len__(self):
+        return 2
 
 class LidarSample:
     # stored in X,Y,Z,I,Ring, R,G,B,A,T

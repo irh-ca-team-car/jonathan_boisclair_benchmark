@@ -118,7 +118,7 @@ class YoloV5Detector(Detector):
                 detectionImages : Detection = sample[img].detection
                 for box in detectionImages.boxes2d:
                     targets.append([
-                        img, box.c, box.x/640.0,box.y/640.0,box.w/640.0,box.h/640.0
+                        img, box.c, (box.x+box.w/2)/640.0,(box.y+box.h/2)/640.0,box.w/640.0,box.h/640.0
                     ])
 
             if len(targets)>0:

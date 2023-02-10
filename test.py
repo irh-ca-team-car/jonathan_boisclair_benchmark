@@ -164,7 +164,11 @@ for dname,dataset in datasets:
     #models = [models[-1]]
     #models = [("EfficientDetector_d0", Detector.named("EfficientDetector_d0"))]
     models : List[Tuple[str,Detector]] = [("retinanet_resnet50_fpn_v2",Detector.named("retinanet_resnet50_fpn_v2"))]
-    models : List[Tuple[str,Detector]] = [("yolov5n",Detector.named("yolov5n")),("yolov5s",Detector.named("yolov5s")),("yolov5m",Detector.named("yolov5m")),("yolov5x",Detector.named("yolov5x")),("retinanet_resnet50_fpn_v2",Detector.named("retinanet_resnet50_fpn_v2"))]
+    models : List[Tuple[str,Detector]] = [
+        ("yolov5n",Detector.named("yolov5n")),
+    ("yolov5s",Detector.named("yolov5s")),
+    ("yolov5m",Detector.named("yolov5m")),
+    ("retinanet_resnet50_fpn_v2",Detector.named("retinanet_resnet50_fpn_v2"))]
     print([name for (name, det) in models])
 
     for i, (name, det) in enumerate(models):
@@ -238,4 +242,7 @@ for dname,dataset in datasets:
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         torch.save(tmpModule.state_dict(),save_name)
+        del tmpModule
+        del model
+        del losses
         pass

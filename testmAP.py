@@ -1,10 +1,30 @@
+from interface.datasets.detection.Coco import CocoDetection
 from interface.detectors import Detector, Detection, Box2d
 from interface.detectors import Sample
+import interface.detectors
 import interface
 import torch
 import time
 import cv2
 import torchvision
+
+def datasetAttempt():
+    from interface.metrics.Metrics import DatasetAveragePrecision
+    dataDir = 'interface/datasets/coco'
+    dataType = 'val2014'
+    annFile = '%s/annotations/instances_%s.json' % (dataDir, dataType)
+    dataset = CocoDetection("interface/datasets/coco/imgs", annFile).withMax(100)
+
+    model = Detector.named("yolov5n").adaptTo(dataset).to("cuda:0")
+    model.eval()
+
+    map = DatasetAveragePrecision(model,dataset, verbose = True)
+    print(map.mAP(0.000000001))
+
+datasetAttempt()
+
+
+exit(0)
 
 det = Detection()
 box2d = Box2d()
