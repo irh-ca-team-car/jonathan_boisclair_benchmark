@@ -109,13 +109,13 @@ if itiNeedTraining:
     torch.save(iti.state_dict(), "iti_"+itiName+".pth")
 
 preScale = ScaleTransform(640, 640)
-randomCrop = RandomCropAspectTransform(200,200,0.2,False)
+randomCrop = RandomCropAspectTransform(400,400,0.2,True)
 transform2 = ScaleTransform(480, 352)
-rotation = RandomRotateTransform([0,0,0,0,0,0,0,0,0,90,180,270])
+rotation = RandomRotateTransform([0,1,2,3,4,5,6,7,8,9,10,90,180,270,359,358,357,356,355,354,353,352,351,350])
 autoContrast = AutoContrast()
 transforms = [autoContrast,device,preScale,rotation,randomCrop,preScale]
-transforms = [autoContrast,device,preScale]
-def smart_optimizer(model, name='Adam', lr=0.001, momentum=0.9, decay=1e-5):
+transforms = [autoContrast,device,rotation,randomCrop,preScale]
+def smart_optimizer(model, name='Adam', lr=2.4e-5, momentum=0.9, decay=1e-6):
     import torch.nn as nn
     # YOLOv5 3-param group optimizer: 0) weights with decay, 1) weights no decay, 2) biases no decay
     g = [], [], []  # optimizer parameter groups
@@ -164,7 +164,7 @@ for dname,dataset in datasets:
     #models = [models[-1]]
     #models = [("EfficientDetector_d0", Detector.named("EfficientDetector_d0"))]
     models : List[Tuple[str,Detector]] = [("retinanet_resnet50_fpn_v2",Detector.named("retinanet_resnet50_fpn_v2"))]
-    models : List[Tuple[str,Detector]] = [("yolov5s",Detector.named("yolov5s")),("yolov5m",Detector.named("yolov5m")),("retinanet_resnet50_fpn_v2",Detector.named("retinanet_resnet50_fpn_v2"))]
+    models : List[Tuple[str,Detector]] = [("yolov5n",Detector.named("yolov5n")),("yolov5s",Detector.named("yolov5s")),("yolov5m",Detector.named("yolov5m")),("yolov5x",Detector.named("yolov5x")),("retinanet_resnet50_fpn_v2",Detector.named("retinanet_resnet50_fpn_v2"))]
     print([name for (name, det) in models])
 
     for i, (name, det) in enumerate(models):
@@ -175,6 +175,8 @@ for dname,dataset in datasets:
         tmpModule = torch.nn.ModuleList([model,iti])
 
         optimizer = torch.optim.Adamax(tmpModule.parameters())
+
+        print("Parameters",sum(p.data.nelement() for p in tmpModule.parameters()))
         if "yolo" in name:
             optimizer =smart_optimizer(tmpModule)
         losses = 0
@@ -199,9 +201,10 @@ for dname,dataset in datasets:
                 loss_iti = sum([ iti.loss(a, b) for (a,b) in zip(cocoSamp,values)])
                 losses += loss_iti 
                 optimizer.zero_grad()
+                t.desc = name +" "+str(losses.item())
+
                 if not torch.isnan(losses):
                     losses.backward()
-                    t.desc = name +" "+str(losses.item())
                     #tqdm.write(str(losses.item()))
                     optimizer.step()
                 optimizer.zero_grad()
@@ -229,8 +232,10 @@ for dname,dataset in datasets:
                 break
             #show(cocoSamp.detection.onImage(cocoSamp), False)
             model.train()
-            cv2.waitKey(100)
+            cv2.waitKey(1)
             #del model
-
+        optimizer.zero_grad()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         torch.save(tmpModule.state_dict(),save_name)
         pass

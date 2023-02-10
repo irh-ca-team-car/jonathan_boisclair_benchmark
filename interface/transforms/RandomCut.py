@@ -31,7 +31,7 @@ def random_cut(sample: Union[Sample,List[Sample]],min_width:int,min_height:int, 
                     new_width = int(wh * new_height)
                     max_x = original_aspect.w - new_width
                     if new_x > max_x: new_x=int(max_x)
-                if len(new_sample.detection.boxes2d) > 0:
+                if sample.detection is None or len(new_sample.detection.boxes2d) > 0 or len(sample.detection.boxes2d)==0:
                     return new_sample
 
     if isinstance(sample,list):

@@ -38,7 +38,7 @@ class CitiscapesDetection(DetectionDataset):
 "sky"	,"sky",
 "ground" , "dynamic", "static", "ego vehicle","out of roi","license plate","rectification border"
 ]
-    NoTrainClass = ["void","road","sidewalk","parking","rail track","construction","building","wall","fence","guard rail","bridge","tunnel",
+    NoTrainClass = ["void","road","sidewalk","parking","rail track","construction","building","wall","fence","guard rail","bridge","tunnel","pole" ,
     "object","polegroup","nature","vegetation","terrain","sky","ground","dynamic","static","ego vehicle","out of roi","license plate","rectification border"]
     def classesList(self):
         return list(CitiscapesDetection.CitiscapesClasses)
