@@ -362,7 +362,7 @@ class Sample:
                 if k == 27:  # Esc key to stop
                     break
         else:
-            cv2.waitKey(1)
+            return cv2.waitKey(1)
 class Box2d:
     x: float
     y: float

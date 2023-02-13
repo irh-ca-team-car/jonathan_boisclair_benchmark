@@ -21,14 +21,34 @@ def show(t: torch.Tensor,wait: bool = False):
     cv2.imshow("Image", np_)
     # for i in range(30):
 
-    if wait:
-        while True:
+    while True:
             cv2.imshow("Image", np_)
             k = cv2.waitKey(1)
             if k == 27:  # Esc key to stop
-                break
-    else:
-        cv2.waitKey(1)
+                return False
+            if k == 115:
+                return True
+dataset = A2Detection("data/FLIR_CONVERTED/all.csv")
+from tqdm import tqdm
+import random
+from interface.transforms.Scale import scale
+from interface.transforms.TorchVisionFunctions import AdjustBrightness
+br = AdjustBrightness(0.6)
+for cocoSamp in tqdm(dataset):
+    cocoSamp:Sample = cocoSamp
+    scaled = br(scale(cocoSamp,400,400))
+    if show(scaled.getRGB()):
+        samp = br(cocoSamp)
+        img = cocoSamp.detection.onImage((samp.getRGB()*255).byte(), colors=[(255,0,0)])
+        torchvision.io.write_jpeg(img,"image.jpg")
+
+        cocoSamp.detection.boxes2d=random.choices(cocoSamp.detection.boxes2d, k=int(len(cocoSamp.detection.boxes2d)*0.6))
+        img = cocoSamp.detection.onImage((samp.getRGB()*255).byte(), colors=[(255,0,0)])
+        torchvision.io.write_jpeg(img,"image_no_box.jpg")
+        break
+    pass
+
+exit(0)
 
 #dataset = CitiscapesDetection(suffix="8bit.png")
 #dataset = A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv")
