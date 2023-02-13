@@ -124,18 +124,36 @@ class CocoDetection(DetectionDataset):
 
     def __init__(self, root=None, annFile=None) -> None:
         self.max=None
+        self.min=0
         if root is None or annFile is None:
             self.CD = None
         else:
             self.CD = CD(root,annFile=annFile,transform=torchvision.transforms.ToTensor())
         pass
     def withMax(self,max):
-        self.max = max
-        return self
+        coco = CocoDetection()
+        coco.max = max
+        coco.min= self.min
+        coco.CD = self.CD
+        return coco
+    def withSkip(self,maxValue) -> "DetectionDataset":
+        coco = CocoDetection()
+        coco.max = self.max
+        coco.min= maxValue
+        coco.CD = self.CD
+        return coco
+    def shuffled(self) -> "DetectionDataset":
+        import random
+        coco = CocoDetection()
+        coco.max = self.max
+        coco.min= self.min
+        #coco.CD = random.shuffle( self.CD )
+        return coco
+
     def __len__(self):
         if self.CD is not None:
             if self.max is not None:
-                return min(len(self.CD),self.max)
+                return min(len(self.CD)-self.min,self.max)
             return len(self.CD)
         return 0
     def __getitem__(self, index: int) -> Tuple[Any, Any]:

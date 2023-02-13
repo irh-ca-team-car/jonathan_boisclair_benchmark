@@ -63,6 +63,21 @@ class A1Detection(DetectionDataset):
                 toRemove.append(path)
         for path in toRemove:
             self.images.remove(path)
+    def withMax(self,max) -> "A1Detection":
+        coco = A1Detection()
+        coco.images = self.images[:max]
+        return coco
+    def withSkip(self,maxValue) -> "A1Detection":
+        coco = A1Detection()
+        coco.images = self.images[maxValue:]
+        return coco
+    def shuffled(self) -> "A1Detection":
+        import random
+        coco = A1Detection()
+        coco.images = [x for x in self.images]
+        random.shuffle( coco.images )
+        return coco
+
     def __len__(self):
         return len(self.images)
     def label(self,index:int) -> str:

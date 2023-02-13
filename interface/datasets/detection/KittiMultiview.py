@@ -12,7 +12,28 @@ class KittiMultiviewDetection:
     images: fo.Dataset
     data : List[fo.Sample]
 
-    def __init__(self, split: Union[Literal["train"],Literal["test"]],dataset_dir, **kwargs) -> None:
+    def withMax(self,max) -> "KittiMultiviewDetection":
+        coco = KittiMultiviewDetection()
+        coco.data = self.data[:max]
+        coco.images = self.images
+        coco.A1Classes = self.A1Classes
+        return coco
+    def withSkip(self,maxValue) -> "KittiMultiviewDetection":
+        coco = KittiMultiviewDetection()
+        coco.data = self.data[maxValue:]
+        coco.images = self.images
+        coco.A1Classes = self.A1Classes
+        return coco
+    def shuffled(self) -> "KittiMultiviewDetection":
+        import random
+        coco = KittiMultiviewDetection()
+        coco.data = [x for x in self.data]
+        random.shuffle( coco.data )
+        coco.images = self.images
+        coco.A1Classes = self.A1Classes
+        return coco
+
+    def __init__(self, split: Union[Literal["train"],Literal["test"], None]=None,dataset_dir=None, **kwargs) -> None:
         kwargs["dataset_dir"]=dataset_dir
         
         self.images = foz.load_zoo_dataset("kitti-multiview", split=split, **kwargs)

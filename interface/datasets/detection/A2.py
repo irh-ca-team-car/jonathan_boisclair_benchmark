@@ -76,6 +76,28 @@ class A2Detection(DetectionDataset):
             
             #line = line[line.index(self.root.name)+self.root.name.__len__()+1:]
             #self.images.append(os.path.join(self.root,line))
+    def withMax(self,max) -> "A2Detection":
+        coco = A2Detection()
+        coco.images = self.images[:max]
+        return coco
+    def withSkip(self,maxValue) -> "A2Detection":
+        coco = A2Detection()
+        coco.images = self.images[maxValue:]
+        return coco
+    def shuffled(self) -> "A2Detection":
+        import random
+        coco = A2Detection()
+        coco.images = [x for x in self.images]
+        random.shuffle( coco.images )
+        return coco
+
+    def __len__(self):
+        if self.CD is not None:
+            if self.max is not None:
+                return min(len(self.CD)-self.min,self.max)
+            return len(self.CD)
+        return 0
+
     def __len__(self):
         return len(self.images)
     def __getitem__(self, index: int) -> Sample:

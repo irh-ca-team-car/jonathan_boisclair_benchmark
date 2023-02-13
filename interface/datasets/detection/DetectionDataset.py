@@ -17,6 +17,13 @@ class DetectionDataset:
     def __getitem__(self, index: int) -> Sample:
         return Sample()
 
+    def withMax(self,maxValue) -> "DetectionDataset":
+        return self
+    def withSkip(self,maxValue) -> "DetectionDataset":
+        return self
+    def shuffled(self,maxValue) -> "DetectionDataset":
+        return self
+
     datasets: Dict[str,"DetectionDataset"] = dict()
     def register(name:Union["DetectionDataset",str],dataset:Union[None,"DetectionDataset"]=None):
         if isinstance(name, DetectionDataset):

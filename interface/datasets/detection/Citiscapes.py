@@ -66,6 +66,21 @@ class CitiscapesDetection(DetectionDataset):
         else:
             return self.isBanned(self.getName(nameOrId))
 
+    def withMax(self,max) -> "CitiscapesDetection":
+        coco = CitiscapesDetection()
+        coco.images = self.images[:max]
+        return coco
+    def withSkip(self,maxValue) -> "CitiscapesDetection":
+        coco = CitiscapesDetection()
+        coco.images = self.images[maxValue:]
+        return coco
+    def shuffled(self) -> "CitiscapesDetection":
+        import random
+        coco = CitiscapesDetection()
+        coco.images = [x for x in self.images]
+        random.shuffle( coco.images )
+        return coco
+
     images: List[CitiscapesGroup]
     def __init__(self, root=None, mode="train", suffix="8bit.png") -> None:
         self.images = []
