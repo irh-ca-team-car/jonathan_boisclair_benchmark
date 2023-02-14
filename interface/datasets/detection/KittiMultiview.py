@@ -189,13 +189,13 @@ class KittiMultiviewDetection:
                     minz = rotated_vectors[:,2].min()
                     maxz = rotated_vectors[:,2].max()
 
-                    box.x = minx
-                    box.y = miny
-                    box.z = minz
+                    box.x = -maxy
+                    box.y = minz
+                    box.z = minx
 
-                    box.w = maxx-minx
-                    box.h = maxy-miny
-                    box.d = maxz-minz
+                    box.w = maxy-miny
+                    box.h = maxz-minz
+                    box.d = maxx-minx
                     if not self.isBanned(d["label"]):
                         citiSamp.detection.boxes3d.append(box)
 

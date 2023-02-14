@@ -73,7 +73,6 @@ class RosbagDataset:
                     if type.__name__ == "PointCloud2":
                         self.pcl_topic = row[0]
 
-                    print(row[1], row[2])
             except BaseException as e:
                 print("Could not playback ",row[1],"due to type not found:[",row[2],"]", e)
         con.close()

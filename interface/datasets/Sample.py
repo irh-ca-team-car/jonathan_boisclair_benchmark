@@ -101,6 +101,10 @@ class LidarSample:
         Z = self._lidar[:,2:3]
         I = self._lidar[:,3:4]
         return torch.cat([X,Y,Z,I],1)
+    def IR(self) -> torch.Tensor:
+        I = self._lidar[:,3:4]
+        R = self._lidar[:,4:5]
+        return torch.cat([I,R],1)
     def XYZIR(self) -> torch.Tensor:
         X = self._lidar[:,0:1]
         Y = self._lidar[:,1:2]
@@ -168,6 +172,74 @@ class LidarSample:
                                         front=[0.4257, -0.2125, -0.8795],
                                         lookat=[0, 0,0],
                                         up=[1,0,0])
+    def birdseye(self,sample : "Sample",scale=25):
+        xyzrgb = self.XYZRGBT()
+        x = xyzrgb[:,0]
+        y = xyzrgb[:,1]
+        z = xyzrgb[:,2]
+
+        if torch.nonzero(xyzrgb[:,3:6]).shape[0] ==0:
+            if torch.nonzero(xyzrgb[:,6]).shape[0] != 0:
+                xyzrgb[:,3]=xyzrgb[:,6]
+                xyzrgb[:,4]=xyzrgb[:,6]
+                xyzrgb[:,5]=xyzrgb[:,6]
+            else:
+                ir = self.IR()
+                if torch.nonzero(ir[:,0]).shape[0] != 0:
+                    xyzrgb[:,3]=ir[:,0]
+                    xyzrgb[:,4]=ir[:,0]
+                    xyzrgb[:,5]=ir[:,0]
+                elif torch.nonzero(ir[:,1]).shape[0] != 0:
+                    xyzrgb[:,3]=ir[:,1]
+                    xyzrgb[:,4]=ir[:,1]
+                    xyzrgb[:,5]=ir[:,1]
+                else:
+                    xyzrgb[:,3:6]=1
+
+        xmin = x.min()
+        xmax = x.max()
+        ymin = y.min()
+        ymax = y.max()
+
+        import math
+
+        hw = max(abs(math.ceil(xmax)),abs(math.floor(xmin))) * scale
+        width = 2*hw
+        #width = (math.ceil(xmax) - math.floor(xmin)) *scale
+        hh = max(abs(math.ceil(ymax)),abs(math.floor(ymin))) * scale
+        height=2*hh
+        #height = (math.ceil(ymax) - math.floor(ymin)) *scale
+
+        #cx = abs(math.floor(xmin))  *scale
+        #cy = abs(math.floor(ymin))  *scale
+        cx = hw
+        cy = hh
+
+        cwh = torch.zeros([3,width,height]).float()
+
+        x = (x *scale).long() + cx
+        y = (y *scale).long() + cy
+
+        cwh[:,x,y] = xyzrgb[:,3:6].permute(1,0).float()
+        samp = Sample()
+
+        cwh[:,cx,cy]= torch.tensor([0,1,0]).float()
+        #cwh[1,(cx-scale):(cx+scale),(cy-scale):(cy+scale)]= 1
+        samp.setImage(cwh)
+
+        if sample.detection is not None:
+            samp.detection = Detection()
+            for box3d in sample.detection.boxes3d:
+                box2d = Box2d()
+                box2d.c = box3d.c
+                box2d.x = (box3d.x * scale) + hh
+                box2d.y = (box3d.y * scale) + hw
+                box2d.w = box3d.w * scale
+                box2d.h = box3d.h * scale
+                box2d.cf = box3d.cf
+                box2d.cn = box3d.cn
+                samp.detection.boxes2d.append(box2d)
+        return samp
 
 class Sample:
     _img : torch.Tensor
