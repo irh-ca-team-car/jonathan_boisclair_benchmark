@@ -165,7 +165,7 @@ class AveragePrecision:
         if len(keys) == 0:
             return 1
         if len(keys) == 1:
-            key = keys[0]
+            key = list(keys)[0]
             a = classes[key]
             b = classesdet[key]
             m = AveragePrecision(a, b)

@@ -31,7 +31,9 @@ class A1Detection(DetectionDataset):
             return A1Detection.isBanned(A1Detection.getName(nameOrId))
 
     images: List[str]
-    def __init__(self, txtFile:str) -> None:
+    def __init__(self, txtFile:str=None) -> None:
+        if txtFile is None:
+            return
         import pathlib
         self.root = pathlib.Path(txtFile).parent.parent
         

@@ -42,7 +42,9 @@ class A2Detection(DetectionDataset):
             return A2Detection.isBanned(A2Detection.getName(nameOrId))
 
     images: List[A2Group]
-    def __init__(self, txtFile:str) -> None:
+    def __init__(self, txtFile:str=None) -> None:
+        if txtFile is None:
+            return
         import pathlib
         self.root = pathlib.Path(txtFile).parent
         

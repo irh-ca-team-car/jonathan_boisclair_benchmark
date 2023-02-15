@@ -8,6 +8,7 @@ class ITI(nn.Module):
     def __init__(self, supportBatch) -> None:
         super(ITI,self).__init__()
         self.supportBatch = supportBatch
+        self.name=None
     def forward(self,x:Sample) -> Sample:
         if isinstance(x,list):
             if self.supportBatch:
