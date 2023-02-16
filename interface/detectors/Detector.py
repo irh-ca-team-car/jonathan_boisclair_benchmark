@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Union
 import torch
 import torch.nn as nn
 from ..datasets.Sample import Sample
@@ -69,7 +69,7 @@ class Detector(nn.Module):
         return c
     def getAllRegisteredDetectors() -> Dict[str,Callable[[],"Detector"]]:
         return dict(Detector.registered_detectors)
-    def calculateLoss(self,sample:Sample)->torch.Tensor:
+    def calculateLoss(self,sample:Union[Sample,List[Sample]])->torch.Tensor:
         ret=self.forward(sample, sample)
         if isinstance(ret,list):
             ret= sum(ret)
@@ -114,6 +114,7 @@ class TorchVisionDetector(Detector):
                 target = [t.toTorchVisionTarget(self.device) for t in target]
             else:
                 target = [target.toTorchVisionTarget(self.device)]
+
             loss_dict= self.model(rgb,target )
             return sum(loss for loss in loss_dict.values())
         torchvisionresult= self.model(rgb)
@@ -127,12 +128,6 @@ class TorchVisionDetector(Detector):
         self.model = self.model.to(device)
         return self
     def calculateLoss(self,sample:Sample):
-        #if isinstance(sample,list):
-        #    ret=sum(self.forward(sample, sample))
-        #else:
-        #    ret= self.forward(sample, sample)
-        #return ret
-
         losses= self.forward(sample, sample)
         return losses
    

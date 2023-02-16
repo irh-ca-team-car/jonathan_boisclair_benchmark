@@ -607,7 +607,7 @@ class Detection:
         d.boxes2d = [x for x in self.boxes2d if int(x.c) == int(c)]
         d.boxes3d = [x for x in self.boxes3d if int(x.c) == int(c)]
         return d
-    def onImage(self, sample, colors:List[Tuple[int,int,int]]=None)->torch.Tensor:
+    def onImage(self, sample:Union[Sample,torch.Tensor], colors:List[Tuple[int,int,int]]=None)->torch.Tensor:
         if isinstance(sample,Sample):
             img = (sample.getRGB()*255.0).byte()
         elif isinstance(sample,torch.Tensor):

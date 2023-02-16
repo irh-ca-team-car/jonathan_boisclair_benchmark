@@ -38,8 +38,8 @@ def show(t: torch.Tensor, wait: bool = False):
     else:
         return cv2.waitKey(1)
 
-coco = pycocotools.coco.COCO(annFile)
-coco.download("interface/datasets/coco/imgs", coco.getImgIds(catIds=[3]))
+#coco = pycocotools.coco.COCO(annFile)
+#coco.download("interface/datasets/coco/imgs", coco.getImgIds(catIds=[3]))
 
 datasets : List[Tuple[str,DetectionDataset]] = [
     ("A1_UQTR_REGULAR",A1Detection("data/attention-data/UQTRR/full.txt")),
@@ -104,21 +104,24 @@ rotation = RandomRotateTransform([0,1,2,3,4,5,6,7,8,9,10,90,180,270,359,358,357,
 autoContrast = AutoContrast()
 transforms = [autoContrast,device,preScale,rotation,randomCrop,preScale]
 transforms = [autoContrast,device,rotation,randomCrop,preScale]
-
-for dname,dataset in datasets:
+for b in range(10):
+    for dname,dataset in datasets:
         from tqdm import tqdm
         dataset = dataset.withMax(1000)
         models : List[Tuple[str,Detector]] = [
-            ("retinanet_resnet50_fpn_v2",Detector.named("retinanet_resnet50_fpn_v2")),
-            ("ssd_lite",Detector.named("ssd_lite")),
-            ("yolov5n",Detector.named("yolov5n")),
-            ("yolov5s",Detector.named("yolov5s")),
-            ("yolov5m",Detector.named("yolov5m")),
+            ("ssd",2,Detector.named("ssd")),
+            ("retinanet_resnet50_fpn_v2",1,Detector.named("retinanet_resnet50_fpn_v2")),
+            ("ssd_lite",2,Detector.named("ssd_lite")),
+            ("yolov5n",4,Detector.named("yolov5n")),
+            ("yolov5s",4,Detector.named("yolov5s")),
+            ("yolov5m",2,Detector.named("yolov5m")),
         ]
         
         nets = []
-        for (mname, det) in models:
-            for itiName in ["VCAE6","Identity"]:
+        for (mname,bsize, det) in models:
+            for itiName,factor in [("Identity",1.5),
+            #("VCAE6",1),
+            ]:
                 iti = ITI.named(itiName)().to(device)
                 iti.name = itiName
 
@@ -128,7 +131,7 @@ for dname,dataset in datasets:
                     except:
                         pass
                     
-                model: Detector = det.adaptTo(dataset).to(device)
+                model: Detector = det.adaptTo(dataset).to("cpu")
                 save_name = "train_"+itiName+"_"+dname+"_"+mname+".pth"
                 tmpModule = torch.nn.ModuleList([model,iti])
                 if os.path.exists(save_name):
@@ -136,32 +139,37 @@ for dname,dataset in datasets:
                         tmpModule.load_state_dict(torch.load(save_name, map_location=device), strict=False)
                     except:
                         raise Exception(save_name+" does not load")
-               
-                nets.append((mname,iti,model,save_name))
+                #if "retinanet_resnet50_fpn_v2" == mname and itiName == "VCAE6": continue
+                nets.append((mname,int(bsize*factor),iti,model,save_name))
 
         
 
-        for i, (mname,iti, det,model_path) in enumerate(nets):
+        for i, (mname,bsize,iti, det,model_path) in enumerate(nets):
+            iti:ITI = iti
+            det: Detector = det.to(device)
             det.train()
             tmpModule = torch.nn.ModuleList([det,iti])
-            optimizer = torch.optim.Adamax(tmpModule.parameters())
+            optimizer = torch.optim.Adamax(det.parameters())
             if "yolo" in mname:
                 optimizer =smart_optimizer(tmpModule)
 
-            t = tqdm(Batch.of(dataset,2), leave=True, desc = dname+":"+iti.name+":"+mname)
+            t = tqdm(Batch.of(dataset,bsize), leave=True, desc = dname+":"+iti.name+":"+mname)
             for b, samp in enumerate(t):
                 cocoSamp = interface.transforms.apply(samp, transforms)
-                values=iti.forward(cocoSamp)
+                #values=iti.forward(cocoSamp)
+                values=cocoSamp
                 losses: torch.Tensor = (det.calculateLoss(values))
+                #if torch.isnan(losses):
+                #    losses=0
                 if isinstance(cocoSamp,Sample):
                     loss_iti = iti.loss(cocoSamp,values) 
                 else:
                     loss_iti = sum([ iti.loss(a, b) for (a,b) in zip(cocoSamp,values)])
+                #if not torch.isnan(loss_iti):
+                #    losses += (loss_iti*0.1)
+                t.desc = dname+":"+iti.name+":"+mname +" "+str(float(losses))
 
-                losses += (loss_iti *50)
-                t.desc = dname+":"+iti.name+":"+mname +" "+str(losses.item())
-
-                if not torch.isnan(losses):
+                if not isinstance(losses,int) and not torch.isnan(losses) :
                     losses.backward()
                     optimizer.step()
                 optimizer.zero_grad()
@@ -171,15 +179,21 @@ for dname,dataset in datasets:
 
                 if isinstance(cocoSamp,List):
                     cocoSamp_ = cocoSamp[0]
-                    values = values[0]
+                    values:Sample = values[0]
                     del cocoSamp
                     cocoSamp :Sample = cocoSamp_
                 detections = model.forward(cocoSamp, dataset=dataset)
-                workImage = values.clone()
-                workImage = cocoSamp.detection.onImage(
+                workImage :Sample= values.clone()
+                workImage: torch.Tensor = cocoSamp.detection.onImage(
                     workImage, colors=[(255, 0, 0)])
                 #workImage = detections.filter(0.1).onImage(workImage)
-                detections=detections.filter(0.3)
+                avg = sum([x.cf for x in detections.boxes2d])/len(detections.boxes2d)
+                avg = (avg+max([x.cf for x in detections.boxes2d]))/2
+                #if avg < 0.3:
+                #    avg = 0.3
+                tqdm.write(str(avg))
+
+                detections=detections.filter(avg)
 
                 workImage = detections.NMS_Pytorch().onImage(workImage, colors=[(128, 128, 255)])
                 #workImage = detections.filter(0.90).onImage(workImage)
@@ -188,9 +202,27 @@ for dname,dataset in datasets:
                 if show(workImage, False) >=0:
                     break
                 model.train()
+                del cocoSamp
+                del values
+                del detections
+                del workImage
             tqdm.write("Writing weights to "+model_path)
             torch.save(tmpModule.state_dict(),model_path)
             tqdm.write("Weights written to "+model_path)
+            det.to("cpu")
+            del tmpModule
+            del det
+            del iti
+            del optimizer
+            import time
+
+            
+            break
+
+            time.sleep(2)
+            torch.cuda.empty_cache()
+        break
+
 
                 
             

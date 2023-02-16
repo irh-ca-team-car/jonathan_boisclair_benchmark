@@ -1,15 +1,16 @@
-from typing import List, Type
+from typing import List, Type, Union
 import torch.nn as nn
 import torch
 from ..datasets import Sample, Size
 
 class ITI(nn.Module):
     registered={}
+    name: Union[str,None]
     def __init__(self, supportBatch) -> None:
         super(ITI,self).__init__()
         self.supportBatch = supportBatch
         self.name=None
-    def forward(self,x:Sample) -> Sample:
+    def forward(self,x:Union[Sample,List[Sample]]) -> Union[Sample,List[Sample]]:
         if isinstance(x,list):
             if self.supportBatch:
                 return self._forward(x)
@@ -89,7 +90,9 @@ class CAE_ITI(ITI):
             return ret
         img = CAE_ITI.getRGBT(x)
         output = self.model(img.to(self.device).unsqueeze(0))
-        output = torch.clamp(output,0,1)
+        output[output>0.9999] = 0.9999
+        output[output<0.0001] = 0.0001
+        #output = torch.clamp(output,0,1)
         #print(output.shape)
         out = Sample()
         out.setImage(output.squeeze(0))
