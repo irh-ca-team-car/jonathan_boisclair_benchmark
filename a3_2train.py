@@ -155,21 +155,22 @@ for b in range(10):
 
             t = tqdm(Batch.of(dataset,bsize), leave=True, desc = dname+":"+iti.name+":"+mname)
             for b, samp in enumerate(t):
-                cocoSamp = interface.transforms.apply(samp, transforms)
-                #values=iti.forward(cocoSamp)
-                values=cocoSamp
+                optimizer.zero_grad()
+                with torch.no_grad():
+                    cocoSamp = interface.transforms.apply(samp, transforms)
+                    values=iti.forward(cocoSamp)
                 losses: torch.Tensor = (det.calculateLoss(values))
                 #if torch.isnan(losses):
                 #    losses=0
-                if isinstance(cocoSamp,Sample):
-                    loss_iti = iti.loss(cocoSamp,values) 
-                else:
-                    loss_iti = sum([ iti.loss(a, b) for (a,b) in zip(cocoSamp,values)])
+                #if isinstance(cocoSamp,Sample):
+                #    loss_iti = iti.loss(cocoSamp,values) 
+                #else:
+                #    loss_iti = sum([ iti.loss(a, b) for (a,b) in zip(cocoSamp,values)])
                 #if not torch.isnan(loss_iti):
                 #    losses += (loss_iti*0.1)
                 t.desc = dname+":"+iti.name+":"+mname +" "+str(float(losses))
 
-                if not isinstance(losses,int) and not torch.isnan(losses) :
+                if not torch.isnan(losses) :
                     losses.backward()
                     optimizer.step()
                 optimizer.zero_grad()
