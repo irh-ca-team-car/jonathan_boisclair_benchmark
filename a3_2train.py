@@ -119,8 +119,9 @@ for b in range(10):
         
         nets = []
         for (mname,bsize, det) in models:
-            for itiName,factor in [("Identity",1.5),
-            #("VCAE6",1),
+            for itiName,factor in [
+            #("Identity",1.5),
+            ("VCAE6",1),
             ]:
                 iti = ITI.named(itiName)().to(device)
                 iti.name = itiName
@@ -149,25 +150,28 @@ for b in range(10):
             det: Detector = det.to(device)
             det.train()
             tmpModule = torch.nn.ModuleList([det,iti])
-            optimizer = torch.optim.Adamax(det.parameters())
+            optimizer = torch.optim.Adamax(tmpModule.parameters())
             if "yolo" in mname:
                 optimizer =smart_optimizer(tmpModule)
 
             t = tqdm(Batch.of(dataset,bsize), leave=True, desc = dname+":"+iti.name+":"+mname)
             for b, samp in enumerate(t):
+                det.train()
                 optimizer.zero_grad()
                 with torch.no_grad():
                     cocoSamp = interface.transforms.apply(samp, transforms)
-                    values=iti.forward(cocoSamp)
+                values=iti.forward(cocoSamp)
                 losses: torch.Tensor = (det.calculateLoss(values))
-                #if torch.isnan(losses):
-                #    losses=0
-                #if isinstance(cocoSamp,Sample):
-                #    loss_iti = iti.loss(cocoSamp,values) 
-                #else:
-                #    loss_iti = sum([ iti.loss(a, b) for (a,b) in zip(cocoSamp,values)])
-                #if not torch.isnan(loss_iti):
-                #    losses += (loss_iti*0.1)
+                
+                if isinstance(cocoSamp,Sample):
+                    loss_iti = iti.loss(cocoSamp,values) 
+                else:
+                    loss_iti = sum([ iti.loss(a, b) for (a,b) in zip(cocoSamp,values)])
+                if not torch.isnan(loss_iti):
+                    if torch.isnan(losses):
+                        losses = loss_iti
+                    else:
+                        losses += (loss_iti*10)
                 t.desc = dname+":"+iti.name+":"+mname +" "+str(float(losses))
 
                 if not torch.isnan(losses) :
@@ -176,23 +180,24 @@ for b in range(10):
                 optimizer.zero_grad()
                 losses = 0
 
-                model.eval()
+                det.eval()
 
                 if isinstance(cocoSamp,List):
                     cocoSamp_ = cocoSamp[0]
                     values:Sample = values[0]
                     del cocoSamp
                     cocoSamp :Sample = cocoSamp_
-                detections = model.forward(cocoSamp, dataset=dataset)
-                workImage :Sample= values.clone()
-                workImage: torch.Tensor = cocoSamp.detection.onImage(
-                    workImage, colors=[(255, 0, 0)])
+                with torch.no_grad():
+                    detections = det.forward(cocoSamp, dataset=dataset)
+                    workImage :Sample= values.clone()
+                    workImage: torch.Tensor = cocoSamp.detection.onImage(
+                        workImage, colors=[(255, 0, 0)])
                 #workImage = detections.filter(0.1).onImage(workImage)
                 avg = sum([x.cf for x in detections.boxes2d])/len(detections.boxes2d)
                 avg = (avg+max([x.cf for x in detections.boxes2d]))/2
-                #if avg < 0.3:
-                #    avg = 0.3
-                tqdm.write(str(avg))
+                if avg < 0.3:
+                    avg = 0.3
+                #tqdm.write(str(avg))
 
                 detections=detections.filter(avg)
 
@@ -202,19 +207,13 @@ for b in range(10):
                 #    print(b)
                 if show(workImage, False) >=0:
                     break
-                model.train()
-                del cocoSamp
-                del values
-                del detections
-                del workImage
+                
+                
             tqdm.write("Writing weights to "+model_path)
             torch.save(tmpModule.state_dict(),model_path)
             tqdm.write("Weights written to "+model_path)
             det.to("cpu")
-            del tmpModule
-            del det
-            del iti
-            del optimizer
+          
             import time
 
             
