@@ -100,14 +100,15 @@ def smart_optimizer(model, name='Adam', lr=2.4e-5, momentum=0.9, decay=1e-6):
 preScale = ScaleTransform(640, 640)
 randomCrop = RandomCropAspectTransform(400,400,0.2,True)
 transform2 = ScaleTransform(480, 352)
-rotation = RandomRotateTransform([0,1,2,3,4,5,6,7,8,9,10,90,180,270,359,358,357,356,355,354,353,352,351,350])
+rotation = RandomRotateTransform([0,1,2,3,359,358,357,356])
 autoContrast = AutoContrast()
 transforms = [autoContrast,device,preScale,rotation,randomCrop,preScale]
 transforms = [autoContrast,device,rotation,randomCrop,preScale]
-for b in range(10):
+transforms = [device,rotation,preScale]
+for b in range(1000):
     for dname,dataset in datasets:
         from tqdm import tqdm
-        dataset = dataset.withMax(1000)
+        dataset = dataset.withMax(50)
         models : List[Tuple[str,Detector]] = [
             ("ssd",2,Detector.named("ssd")),
             ("retinanet_resnet50_fpn_v2",1,Detector.named("retinanet_resnet50_fpn_v2")),
@@ -120,7 +121,7 @@ for b in range(10):
         nets = []
         for (mname,bsize, det) in models:
             for itiName,factor in [
-            #("Identity",1.5),
+            ("Identity",1.5),
             ("VCAE6",1),
             ]:
                 iti = ITI.named(itiName)().to(device)
@@ -150,28 +151,29 @@ for b in range(10):
             det: Detector = det.to(device)
             det.train()
             tmpModule = torch.nn.ModuleList([det,iti])
-            optimizer = torch.optim.Adamax(tmpModule.parameters())
+            optimizer = torch.optim.Adamax(det.parameters())
             if "yolo" in mname:
-                optimizer =smart_optimizer(tmpModule)
+                optimizer =smart_optimizer(det)
 
             t = tqdm(Batch.of(dataset,bsize), leave=True, desc = dname+":"+iti.name+":"+mname)
+            s_ = None
             for b, samp in enumerate(t):
                 det.train()
                 optimizer.zero_grad()
                 with torch.no_grad():
                     cocoSamp = interface.transforms.apply(samp, transforms)
-                values=iti.forward(cocoSamp)
+                    values=iti.forward(cocoSamp)
                 losses: torch.Tensor = (det.calculateLoss(values))
                 
-                if isinstance(cocoSamp,Sample):
-                    loss_iti = iti.loss(cocoSamp,values) 
-                else:
-                    loss_iti = sum([ iti.loss(a, b) for (a,b) in zip(cocoSamp,values)])
-                if not torch.isnan(loss_iti):
-                    if torch.isnan(losses):
-                        losses = loss_iti
-                    else:
-                        losses += (loss_iti*10)
+                # if isinstance(cocoSamp,Sample):
+                #     loss_iti = iti.loss(cocoSamp,values) 
+                # else:
+                #     loss_iti = sum([ iti.loss(a, b) for (a,b) in zip(cocoSamp,values)])
+                # if not torch.isnan(loss_iti):
+                #     if torch.isnan(losses):
+                #         losses = loss_iti
+                #     else:
+                #         losses += (loss_iti*100)
                 t.desc = dname+":"+iti.name+":"+mname +" "+str(float(losses))
 
                 if not torch.isnan(losses) :
@@ -193,8 +195,10 @@ for b in range(10):
                     workImage: torch.Tensor = cocoSamp.detection.onImage(
                         workImage, colors=[(255, 0, 0)])
                 #workImage = detections.filter(0.1).onImage(workImage)
-                avg = sum([x.cf for x in detections.boxes2d])/len(detections.boxes2d)
-                avg = (avg+max([x.cf for x in detections.boxes2d]))/2
+                avg = 0.3
+                if len(detections.boxes2d) > 0:
+                    avg = sum([x.cf for x in detections.boxes2d])/len(detections.boxes2d)
+                    avg = (avg+max([x.cf for x in detections.boxes2d]))/2
                 if avg < 0.3:
                     avg = 0.3
                 #tqdm.write(str(avg))
@@ -215,9 +219,6 @@ for b in range(10):
             det.to("cpu")
           
             import time
-
-            
-            break
 
             time.sleep(2)
             torch.cuda.empty_cache()
