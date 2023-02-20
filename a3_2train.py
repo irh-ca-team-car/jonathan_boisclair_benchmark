@@ -105,8 +105,22 @@ autoContrast = AutoContrast()
 transforms = [autoContrast,device,preScale,rotation,randomCrop,preScale]
 transforms = [autoContrast,device,rotation,randomCrop,preScale]
 transforms = [device,rotation,preScale]
-for b in range(1000):
+
+state = {"epoch":0, "dataset":0, "model":0}
+if not os.path.exists("a3_2train.state"):
+    torch.save(state,"a3_2train.state")
+state = torch.load("a3_2train.state")
+
+print(state)
+
+for b in range(state["epoch"],1000):
+    d=0
     for dname,dataset in datasets:
+        if d<state["dataset"]:
+            d+=1
+            print("Skipping ",dname)
+
+            continue
         from tqdm import tqdm
         dataset = dataset.withMax(50)
         models : List[Tuple[str,Detector]] = [
@@ -145,8 +159,13 @@ for b in range(1000):
                 nets.append((mname,int(bsize*factor),iti,model,save_name))
 
         
-
+        m=0
         for i, (mname,bsize,iti, det,model_path) in enumerate(nets):
+            if m<state["model"]:
+                m+=1
+                print("Skipping ",mname, iti.name)
+                continue
+
             iti:ITI = iti
             det: Detector = det.to(device)
             det.train()
@@ -209,7 +228,11 @@ for b in range(1000):
                 #workImage = detections.filter(0.90).onImage(workImage)
                 # for b in detections.boxes2d:
                 #    print(b)
-                if show(workImage, False) >=0:
+                val= show(workImage, False)
+                if val >=0:
+                    if val == 27:
+                        print("Requesting program stop")
+                        exit(0)
                     break
                 
                 
@@ -222,7 +245,18 @@ for b in range(1000):
 
             time.sleep(2)
             torch.cuda.empty_cache()
-        break
+            state["model"]+=1
+            torch.save(state,"a3_2train.state")
+            print(state)
+
+        state["model"]=0
+        state["dataset"]+=1
+        torch.save(state,"a3_2train.state")
+        print(state)
+    state["dataset"]=0
+    state["epoch"]+=1
+    torch.save(state,"a3_2train.state")
+    print(state)
 
 
                 
