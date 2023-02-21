@@ -34,3 +34,4 @@ for sample in data:
 
     tensor = sample.detection.onImage(sample, colors=[(128,128,255)])
     sample.show(tensor,True)
+    sample.getLidar().view()

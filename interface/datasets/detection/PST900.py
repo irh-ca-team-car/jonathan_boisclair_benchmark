@@ -1,5 +1,5 @@
 from typing import Any, List, Tuple
-from .. import Sample
+from .. import Sample, LidarSample
 from .DetectionDataset import DetectionDataset
 from ...detectors.Detection import Detection, Box2d,Box3d
 import torchvision.transforms
@@ -13,6 +13,7 @@ class PSTGroup:
         self.thermal = None
         self.rgb = None
         self.labels = None
+        self.depth=None
         pass
 
     def __repr__(self) -> str:
@@ -73,15 +74,17 @@ class PST900Detection(DetectionDataset):
         rgbs= os.listdir(os.path.join(root,mode,"rgb"))
         thermals= os.listdir(os.path.join(root,mode,"thermal_raw"))
         labels= os.listdir(os.path.join(root,mode,"labels"))
+        depths = os.listdir(os.path.join(root,mode,"depth"))
 
 
         self.images = []
 
-        for rgb,ther,lbl in zip(rgbs,thermals,labels):
+        for rgb,ther,lbl,dpt in zip(rgbs,thermals,labels,depths):
             group = PSTGroup()
             group.rgb = os.path.join(root,mode,"rgb",rgb)
             group.thermal = os.path.join(root,mode,"thermal_raw",ther)
             group.labels = os.path.join(root,mode,"labels",lbl)
+            group.depth = os.path.join(root,mode,"depth",dpt)
             self.images.append(group)
 
     def __len__(self):
@@ -101,7 +104,26 @@ class PST900Detection(DetectionDataset):
         thermal = torch.from_numpy(cv2.imread(group.thermal, cv2.IMREAD_UNCHANGED).astype(np.float32)/(2**16)).unsqueeze(0)
         labels = cv2.imread(group.labels, cv2.IMREAD_UNCHANGED)
 
+        import open3d as o3d
+        
+        depths = o3d.io.read_image(group.depth)
+        color = o3d.io.read_image(group.rgb)
+        rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(color,depths)
+        pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, o3d.camera.PinholeCameraIntrinsic(
+            o3d.camera.PinholeCameraIntrinsicParameters.PrimeSenseDefault))
+        pcd.transform([[1,0,0,0],[0,-1,0,0],[0,0,-1,0],[0,0,0,1]])
+        pcl_xyz=(torch.tensor(np.asarray(pcd.points)))
+        pcl_rgb=(torch.tensor(np.asarray(pcd.colors)))
+        x = pcl_xyz[:,0:1]
+        y = pcl_xyz[:,1:2]
+        z = pcl_xyz[:,2:3]
+        r = pcl_rgb[:,0:1]
+        g = pcl_rgb[:,1:2]
+        b = pcl_rgb[:,2:3]
+
         sample = Sample()
+        sample._lidar = LidarSample.fromXYZIRingRGBAT(x,z,y, None,None,r,g,b,None,None)
+
         sample.setImage(rgb)
         sample.setThermal(thermal)
 
