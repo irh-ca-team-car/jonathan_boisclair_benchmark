@@ -1,0 +1,124 @@
+from typing import Any, List, Tuple
+from .. import Sample
+from .DetectionDataset import DetectionDataset
+from ...detectors.Detection import Detection, Box2d,Box3d
+import torchvision.transforms
+import os
+import json
+import torchvision.io
+import numpy as np
+import torch
+class PSTGroup:
+    def __init__(self):
+        self.thermal = None
+        self.rgb = None
+        self.labels = None
+        pass
+
+    def __repr__(self) -> str:
+        return json.dumps(self.__dict__)
+
+class PST900Detection(DetectionDataset):
+    CitiscapesClasses = ["void","safety device","backback","tool","person"]
+    def classesList(self):
+        return list(PST900Detection.CitiscapesClasses)
+    def getId(self,str:str):
+        import sys
+        if str == "train":
+            return self.getId("on rails")
+        if str in PST900Detection.CitiscapesClasses:
+            return PST900Detection.CitiscapesClasses.index(str)
+        else:
+            if "group" in str:
+                return self.getId(str.replace("group",""))
+            print(str,"is not a known category from citiscapes",file=sys.stderr)
+            
+            return self.getId("void")
+    def getName(self,id=None):
+        if id is None:
+            return "Citiscapes"
+        if id>=0 and id < len(PST900Detection.CitiscapesClasses):
+            return PST900Detection.CitiscapesClasses[id]
+        return "void"
+    def isBanned(self,nameOrId):
+        if isinstance(nameOrId,str):
+            return nameOrId in PST900Detection.NoTrainClass
+        else:
+            return self.isBanned(self.getName(nameOrId))
+
+    def withMax(self,max) -> "PST900Detection":
+        coco = PST900Detection()
+        coco.images = self.images[:max]
+        return coco
+    def withSkip(self,maxValue) -> "PST900Detection":
+        coco = PST900Detection()
+        coco.images = self.images[maxValue:]
+        return coco
+    def shuffled(self) -> "PST900Detection":
+        import random
+        coco = PST900Detection()
+        coco.images = [x for x in self.images]
+        random.shuffle( coco.images )
+        return coco
+
+    images: List[PSTGroup]
+    def __init__(self, root=None, mode="train") -> None:
+        self.images = []
+        images=dict()
+        jsonFiles: List[Tuple(str, str)] = []
+        imagesFiles: List[str] = []
+        if root is None:
+            root = "/media/boiscljo/LinuxData/Datasets/PST900"
+
+        rgbs= os.listdir(os.path.join(root,mode,"rgb"))
+        thermals= os.listdir(os.path.join(root,mode,"thermal_raw"))
+        labels= os.listdir(os.path.join(root,mode,"labels"))
+
+
+        self.images = []
+
+        for rgb,ther,lbl in zip(rgbs,thermals,labels):
+            group = PSTGroup()
+            group.rgb = os.path.join(root,mode,"rgb",rgb)
+            group.thermal = os.path.join(root,mode,"thermal_raw",ther)
+            group.labels = os.path.join(root,mode,"labels",lbl)
+            self.images.append(group)
+
+    def __len__(self):
+        return len(self.images)
+    def __getitem__(self, index: int) -> Sample:
+        if isinstance(index,slice):
+            values=[]
+            if index.step is not None:
+                values = [v for v in range(index.start,index.stop,index.step)]
+            else:
+                values = [v for v in range(index.start,index.stop)]
+            return [self.__getitem__(v) for v in values]
+        group = self.images[index]
+
+        rgb = torchvision.io.read_image(group.rgb, torchvision.io.ImageReadMode.RGB).float()/255.0
+        import cv2
+        thermal = torch.from_numpy(cv2.imread(group.thermal, cv2.IMREAD_UNCHANGED).astype(np.float32)/(2**16)).unsqueeze(0)
+        labels = cv2.imread(group.labels, cv2.IMREAD_UNCHANGED)
+
+        sample = Sample()
+        sample.setImage(rgb)
+        sample.setThermal(thermal)
+
+        det = Detection()
+        for clz in range(4):
+            class_blobs = (labels == clz+1).astype(np.uint8)
+            contours, hierarchy =cv2.findContours(class_blobs,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+            for contour in contours:
+                x_,y_,w_,h_ = cv2.boundingRect(contour)
+                box = Box2d()
+                box.c = clz+1
+                box.cn = self.getName(box.c)
+                box.x = x_
+                box.y = y_
+                box.w = w_
+                box.h = h_
+                det.boxes2d.append(box)
+        sample.setTarget(det)
+        return sample
+
