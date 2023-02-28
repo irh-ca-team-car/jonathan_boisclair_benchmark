@@ -7,3 +7,6 @@
 [submodule "interface/ITI/impl/CAE-base"]
 	path = interface/ITI/impl/CAEbase
 	url = git@github.com:irh-ca-team-car/CAE-base
+[submodule "interface/impl/yolov7"]
+	path = interface/impl/yolov7
+	url = git@github.com:boiscljo/yolov7.git

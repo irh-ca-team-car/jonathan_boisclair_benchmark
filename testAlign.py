@@ -9,7 +9,10 @@ import time
 import cv2
 import torchvision
 
+x,y,w,h=37, 44, 449, 490
+
 def show(t: torch.Tensor,wait: bool = False):
+    global x,y,w,h
     if len(t.shape) ==3:
         t=t.unsqueeze(0)
     t = torch.nn.functional.interpolate(t, scale_factor=(1.0,1.0))
@@ -22,20 +25,46 @@ def show(t: torch.Tensor,wait: bool = False):
     # for i in range(30):
 
     while True:
+            #right = 83
+            #left = 81
+            #up = 82
+            #down = 84
+            #a=97
+            #s=115
+            #d=100
+            #w=119
             cv2.imshow("Image", np_)
             k = cv2.waitKey(1)
-            if k == 27:  # Esc key to stop
-                return False
+            if k == 83:
+                x = x+1
+            if k == 81:
+                x = x-1
+            if k == 82:
+                y = y-1
+            if k == 84:
+                y = y+1
+            if k == 97:
+                w = w-1
+            if k == 100:
+                w = w+1
+            if k == 119:
+                h = h+1
             if k == 115:
+                h = h+1
+            if w<400:
+                w=400
+            if h<400:
+                h=400
+
+            if k == 27:
                 return True
+            return False
 dataset = A2Detection("data/FLIR_CONVERTED/all.csv")
 from tqdm import tqdm
 import random
 from interface.transforms.Scale import scale
 from interface.transforms.TorchVisionFunctions import AdjustBrightness, AutoContrast
-from interface.transforms import FLIR_FIX
 br = AdjustBrightness(0.6)
-
 def fnThermal(sample: Sample):
     thermal = sample.getThermal()
     min = thermal.min()
@@ -45,36 +74,37 @@ def fnThermal(sample: Sample):
     sample.setThermal(thermal)
     return sample
 
+def FLIR_FIX(sample:Sample):
+    global x,y,w,h
+    if isinstance(sample,list):
+        return [FLIR_FIX(x) for x in sample]
+    sample = scale(sample,400,400)
+    rgb = sample.getRGB()
+    if x + 400 > w:
+        x = w-400
+    if y + 400 > h:
+        y = h-400
+    tmp = torch.nn.functional.interpolate(rgb.unsqueeze(0), size=(h,w)).squeeze(0)[:,(y):(y+400),(x):(x+400)]
+    sample.setImage(tmp)
+
+    print(x,y,w,h)
+    return sample
 
 br = AutoContrast()
-for cocoSamp in tqdm(dataset):
-    cocoSamp:Sample = cocoSamp
-    scaled = FLIR_FIX(fnThermal(br(cocoSamp)))
+
+sample = dataset[0]
+
+while True:
+    scaled = FLIR_FIX(fnThermal(br(sample)))
 
     tmp = (scaled.clone().getThermal()*255).byte()
     imgt = scaled.detection.onImage(tmp, colors=[(255,0,0)])
-
     tmp = (scaled.clone().getRGB()*255).byte()
     imgv = scaled.detection.onImage(tmp, colors=[(255,0,0)])
-
     a = ((imgt.int()+imgv.int()) /2).byte()
     img = torch.cat([imgt,imgv,a],2)
-
-    mean = img[0].float().mean()
     if show(img):
-        torchvision.io.write_jpeg(img,"image.jpg")
-        torchvision.io.write_jpeg((scaled.clone().getRGB()*255).byte(),"image_no_box.jpg")
-        
-        img = scaled.detection.onImage((scaled.clone().getRGB()*255).byte(), colors=[(128,128,255)])
-        torchvision.io.write_jpeg(img,"image_all_box.jpg")
-
-        scaled.detection.boxes2d=random.choices(scaled.detection.boxes2d, k=int(len(scaled.detection.boxes2d)*0.6))
-        img = scaled.detection.onImage((scaled.clone().getRGB()*255).byte(), colors=[(255,0,0)])
-        torchvision.io.write_jpeg(img,"image_less_box.jpg")
-
-       
         break
-    pass
 
 exit(0)
 

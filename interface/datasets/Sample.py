@@ -607,7 +607,7 @@ class Detection:
         d.boxes2d = [x for x in self.boxes2d if int(x.c) == int(c)]
         d.boxes3d = [x for x in self.boxes3d if int(x.c) == int(c)]
         return d
-    def onImage(self, sample:Union[Sample,torch.Tensor], colors:List[Tuple[int,int,int]]=None)->torch.Tensor:
+    def onImage(self, sample:Union[Sample,torch.Tensor], colors:List[Tuple[int,int,int]]=None, width=4)->torch.Tensor:
         if isinstance(sample,Sample):
             img = (sample.getRGB()*255.0).byte()
         elif isinstance(sample,torch.Tensor):
@@ -623,11 +623,11 @@ class Detection:
                 while len(colors) < len(labels):
                     colors.append(colors[i])
                     i+=1
-                img = torchvision.utils.draw_bounding_boxes(img,target["boxes"],labels, width=4, colors=colors)
+                img = torchvision.utils.draw_bounding_boxes(img,target["boxes"],labels, width=width, colors=colors)
                 
                 pass
             else:
-                img = torchvision.utils.draw_bounding_boxes(img,target["boxes"],labels, width=4)
+                img = torchvision.utils.draw_bounding_boxes(img,target["boxes"],labels, width=width)
         return img.to(self.device)
     def toX1Y1X2Y2C(self,device=None) -> torch.Tensor:
         if device is None:

@@ -4,3 +4,4 @@ from .RandomRotate import rotate, RandomRotateTransform, RotateTransform
 from .TorchVisionFunctions import *
 from .Transform import *
 from .RequiresGrad import RequiresGrad
+from .FlirFix import FLIR_FIX

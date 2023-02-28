@@ -1,33 +1,18 @@
 from interface.datasets.Sample import Size
 from ..detectors.Detector import *
 from ..detectors.Detection import *
-from .EffDet.model import getEfficientDetImpl
 from ..datasets import CocoDetection
-from .Yolo import *
 import torch
 
 
-class EfficientDetector(Detector):
+class YoloV7Detector(Detector):
     module: torch.nn.Module
     dataset: CocoDetection
     isTrain: bool
 
     def __init__(self,compound_coef) -> None:
-        super(EfficientDetector, self).__init__(3, True)
-        self.compound_coef = compound_coef
-        self.module = getEfficientDetImpl(compound_coef=compound_coef)
-        self.dataset = CocoDetection
-
-        import pathlib
-        import os
-        weights_path = os.path.join(pathlib.Path(__file__).parent.absolute(),f'../datasets/coco/efficientdet-d{compound_coef}.pth') 
-        try:
-            keys = self.module.model.load_state_dict(torch.load(weights_path), strict=False)
-            print("Loaded EfficientDet weights, except",keys, weights_path)
-        except:
-            print("Could not load weights",weights_path, "did you download them in the coco folder")
-            pass
-        self.freeze_backbone()
+        super(YoloV7Detector, self).__init__(3, True)
+        
 
     def parameters(self, recurse: bool = True):
         return self.module.model.parameters()
@@ -47,7 +32,7 @@ class EfficientDetector(Detector):
     def eval(self):
         self.isTrain = False
     def to(self,device:torch.device):
-        super(EfficientDetector,self).to(device)
+        super(YoloV7Detector,self).to(device)
         self.module = self.module.to(device)
         return self
     def _forward(self, rgb:torch.Tensor,lidar:torch.Tensor,thermal:torch.Tensor, target=None, dataset=None):
@@ -113,34 +98,9 @@ class EfficientDetector(Detector):
 
         loss = cls_loss + reg_loss
 
-    def freeze_backbone(self):
-        def freeze_backbone_(m):
-            classname = m.__class__.__name__
-            for ntl in ['EfficientNet', 'BiFPN']:
-                if ntl in classname:
-                    for param in m.parameters():
-                        param.requires_grad = False
-            classname = m.__class__.__name__
-        self.module.apply(freeze_backbone_)
-    def unfreeze_backbone(self):
-        def unfreeze_backbone_(m):
-            classname = m.__class__.__name__
-            for ntl in ['EfficientNet', 'BiFPN']:
-                if ntl in classname:
-                    for param in m.parameters():
-                        param.requires_grad = True
-            classname = m.__class__.__name__
-        self.module.apply(unfreeze_backbone_)
-
+  
     def adaptTo(self, dataset):
-        state = self.module.state_dict()
-        self.module = getEfficientDetImpl(num_class=len(dataset.classesList()),compound_coef=self.compound_coef)
-        try:
-            self.module.load_state_dict(state,strict=False)
-        except:
-            pass
-        self.dataset = dataset
-        return self
+        raise Exception("Not implemented")
     def calculateLoss(self,sample:Sample):
         if isinstance(sample,list):
             sample=[s.scale(Size(512,512)) for s in sample]
@@ -151,14 +111,10 @@ class EfficientDetector(Detector):
         return losses
 
   
-class EfficientDetectorInitiator():
+class YoloV7DetectorInitiator():
     def __init__(self,coef):
         self.coef=coef
         pass
     def __call__(self):
-        return EfficientDetector(self.coef)
+        return YoloV7Detector(self.coef)
     
-for c in range(9):
-    Detector.register("EfficientDetector_d"+str(c), EfficientDetectorInitiator(c))
-
-
