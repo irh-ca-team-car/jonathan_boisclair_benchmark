@@ -2,21 +2,21 @@ from interface.datasets.Sample import Size
 from ..detectors.Detector import *
 from ..detectors.Detection import *
 from .EffDet.model import getEfficientDetImpl
-from ..datasets import CocoDetection
-from .Yolo import *
+from ..datasets.detection import DetectionDataset
+from .YoloV7 import *
 import torch
 
 
 class EfficientDetector(Detector):
     module: torch.nn.Module
-    dataset: CocoDetection
+    dataset: DetectionDataset
     isTrain: bool
 
     def __init__(self,compound_coef) -> None:
         super(EfficientDetector, self).__init__(3, True)
         self.compound_coef = compound_coef
         self.module = getEfficientDetImpl(compound_coef=compound_coef)
-        self.dataset = CocoDetection
+        self.dataset = DetectionDataset.named("coco-empty")
 
         import pathlib
         import os

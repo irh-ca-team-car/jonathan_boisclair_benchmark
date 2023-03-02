@@ -257,11 +257,21 @@ class Sample:
         self._lidar = None
         #self._img = torch.zeros(3,640,640)
         pass
+    @staticmethod
     def Example() -> "Sample":
         s = Sample()
         img = torchvision.io.read_image("data/1.jpg", torchvision.io.ImageReadMode.UNCHANGED).float()/255.0
         img=torch.nn.functional.interpolate(img.unsqueeze(0) ,size=(640,640)).squeeze(0)
         s.setImage(img)
+        s.detection = Detection()
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[0].x = 150
+        s.detection.boxes2d[0].y = 325
+        s.detection.boxes2d[0].w = 125
+        s.detection.boxes2d[0].h = 175
+        s.detection.boxes2d[0].c = 1
+        s.detection.boxes2d[0].cn = "car"
+
         return s
     def fromFiftyOne(fiftyoneSample: "fo.Sample") -> "Sample":
         s = Sample()

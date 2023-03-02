@@ -5,12 +5,17 @@ from interface.datasets import DetectionDataset,Detection, Sample, Size
 from interface.datasets.Batch import Batch
 from interface.ITI import ITI
 from interface.metrics.Metrics import AveragePrecision, MultiImageAveragePrecision
+from interface.transforms import apply, FLIR_FIX
+from interface.transforms.Scale import ScaleTransform
 import torch
 from tqdm import tqdm
 configs = [
-    ("VCAE6","yolov5n"),
-    ("Identity","yolov5n"),
-    ("DenseFuse","yolov5n"),
+    #("VCAE6","yolov5n"),
+    #("Identity","yolov5n"),
+    #("DenseFuse","yolov5n"),
+    ("VCAE6","yolov7"),
+    ("Identity","yolov7"),
+    ("DenseFuse","yolov7"),
     #("Identity","ssd"),
     #("Identity","fasterrcnn_resnet50_fpn"),
 ]
@@ -49,9 +54,9 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                 iti_impl.load_state_dict(torch.load("VCAE6_A2_retinanet_resnet50_fpn_v2.pth", map_location=device), strict=False)
             except:
                 pass
-        model = Detector.named(detector).to(device)
+        model = Detector.named(detector)
         #if "yolo" not in detector:
-        model = model.adaptTo(dataset)
+        model = model.adaptTo(dataset).to(device)
 
         if os.path.exists("a2e/"+detector+".pth"):
             try:
@@ -61,10 +66,11 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
         else:
             model.train()
             optimizer = torch.optim.Adamax(model.parameters())
-            epochs = tqdm(range(20), leave=False)
+            epochs = tqdm(range(100), leave=False)
             for b in epochs:
-                for cocoSamp in tqdm(Batch.of(datasets[1][1],16), leave=False):
-                    cocoSamp =[samp.scale(Size(640,640)).to(device) for samp in cocoSamp]
+                for cocoSamp in tqdm(Batch.of(datasets[1][1].withMax(500),2), leave=False):
+                    model.train()
+                    cocoSamp=apply(cocoSamp,[FLIR_FIX,"cuda:0"])
                     with torch.no_grad():
                         values=iti_impl.forward(cocoSamp)
                     losses: torch.Tensor = (model.calculateLoss(values))
@@ -77,7 +83,22 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                     optimizer.zero_grad()
                     epochs.desc = str(losses.item())
                     losses = 0
-            torch.save(model.state_dict(),"a2e/"+detector+".pth")
+                    model.eval()
+
+                    cocoSamp_ = cocoSamp[0]
+                    del cocoSamp
+                    cocoSamp :Sample = cocoSamp_
+                    detections = model.forward(cocoSamp, dataset=dataset)
+                    workImage = cocoSamp.clone()
+                    workImage = cocoSamp.detection.onImage(
+                        workImage, colors=[(255, 0, 0)])
+                    detections=detections.filter(0.3)
+
+                    workImage = detections.NMS_Pytorch().onImage(workImage, colors=[(128, 128, 255)])
+
+                    Sample.show(workImage,False, "pretaining of "+detector)
+
+                torch.save(model.state_dict(),"a2e/"+detector+".pth")
 
         #Do Pretraining
         #images
@@ -94,7 +115,8 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
             epochs = tqdm(range(100), leave=False)
             for b in epochs:
                 for cocoSamp in tqdm(Batch.of(dataset_train,1), leave=False):
-                    cocoSamp[0]=cocoSamp[0].scale(Size(352,352)).to(device)
+                    model.train()
+                    cocoSamp=apply(cocoSamp,[FLIR_FIX,"cuda:0",ScaleTransform(Size(352,352))])
                     with torch.no_grad():
                         values=iti_impl.forward(cocoSamp)
                     losses: torch.Tensor = (model.calculateLoss(values))
@@ -109,6 +131,20 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                     losses = 0
 
             model.eval()
+
+            cocoSamp_ = cocoSamp[0]
+            del cocoSamp
+            cocoSamp :Sample = cocoSamp_
+            detections = model.forward(cocoSamp, dataset=dataset)
+            workImage = cocoSamp.clone()
+            workImage = cocoSamp.detection.onImage(
+                        workImage, colors=[(255, 0, 0)])
+            detections=detections.filter(0.3)
+
+            workImage = detections.NMS_Pytorch().onImage(workImage, colors=[(128, 128, 255)])
+
+            Sample.show(workImage,False, "Training of "+detector)
+
 
 
         with torch.no_grad():
