@@ -68,7 +68,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
             optimizer = torch.optim.Adamax(model.parameters())
             epochs = tqdm(range(100), leave=False)
             for b in epochs:
-                for cocoSamp in tqdm(Batch.of(datasets[1][1].withMax(500),2), leave=False):
+                for cocoSamp in tqdm(Batch.of(datasets[1][1].withMax(200),2), leave=False):
                     model.train()
                     cocoSamp=apply(cocoSamp,[FLIR_FIX,"cuda:0"])
                     with torch.no_grad():
