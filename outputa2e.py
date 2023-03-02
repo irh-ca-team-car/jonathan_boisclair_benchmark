@@ -68,20 +68,21 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
             optimizer = torch.optim.Adamax(model.parameters())
             epochs = tqdm(range(100), leave=False)
             for b in epochs:
-                for cocoSamp in tqdm(Batch.of(datasets[1][1].withMax(200),2), leave=False):
+                inner = tqdm(Batch.of(datasets[1][1].withMax(180),4), leave=False)
+                for cocoSamp in inner:
                     model.train()
                     cocoSamp=apply(cocoSamp,[FLIR_FIX,"cuda:0"])
-                    with torch.no_grad():
-                        values=iti_impl.forward(cocoSamp)
-                    losses: torch.Tensor = (model.calculateLoss(values))
-                    #loss_iti = sum([ iti_impl.loss(a, b) for (a,b) in zip(cocoSamp,values)])
-                    #losses += loss_iti 
-                    optimizer.zero_grad()
-                    if not torch.isnan(losses):
-                        losses.backward()
-                        optimizer.step()
-                    optimizer.zero_grad()
-                    epochs.desc = str(losses.item())
+                    values= cocoSamp
+                    for r in range(3):
+                        losses: torch.Tensor = (model.calculateLoss(values))
+                        #loss_iti = sum([ iti_impl.loss(a, b) for (a,b) in zip(cocoSamp,values)])
+                        #losses += loss_iti 
+                        optimizer.zero_grad()
+                        if not torch.isnan(losses):
+                            losses.backward()
+                            optimizer.step()
+                        optimizer.zero_grad()
+                    inner.desc = str(losses.item())
                     losses = 0
                     model.eval()
 
@@ -92,7 +93,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                     workImage = cocoSamp.clone()
                     workImage = cocoSamp.detection.onImage(
                         workImage, colors=[(255, 0, 0)])
-                    detections=detections.filter(0.3)
+                    detections=detections.filter(0.15)
 
                     workImage = detections.NMS_Pytorch().onImage(workImage, colors=[(128, 128, 255)])
 
