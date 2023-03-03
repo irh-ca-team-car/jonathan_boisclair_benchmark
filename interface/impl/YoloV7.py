@@ -37,6 +37,8 @@ class YoloV7Detector(Detector):
 
     def __init__(self,mdl) -> None:
         super(YoloV7Detector, self).__init__(3, False)
+        self.device = "cpu"
+        self.model_name = mdl
         self.model_path = os.path.join(yolov7_dir,"cfg/training/"+mdl+".yaml")
         self.dataset = DetectionDataset.named("coco-empty")
         self.isTrain=False
@@ -47,9 +49,16 @@ class YoloV7Detector(Detector):
         #self.model = attempt_load([self.model_path], map_location="cpu")
         self.stride = int(self.model.stride.max())  # model stride
         self.imgsz = check_img_size(640, s=self.stride)  # check img_size
+
+        try:
+            self.load_state_dict(torch.load(self.model_name+".pth", map_location=self.device),False)
+        except BaseException as e:
+            pass
         
     def load_state_dict(self, state_dict, strict: bool = False):
-        return self.model.load_state_dict(self, state_dict, strict)
+        return self.model.load_state_dict(state_dict, strict)
+    def state_dict(self):
+        return self.model.state_dict()
     def half(self):
         self.module=self.module.half()
     def float(self):
@@ -128,10 +137,7 @@ class YoloV7Detector(Detector):
             RANK = os.environ.get("RANK",None)
             os.environ["RANK"]="10"
             state_dict = self.model.state_dict()
-            autoshape = self.model.__class__
             self.model = Model(self.model_path, ch=3, nc=len(dataset.classesList())).autoshape() 
-            if self.model.__class__ != autoshape:
-                self.model = autoshape(self.model)
             try:
                 self.model.load_state_dict(state_dict,strict=False)
             except:
@@ -140,6 +146,7 @@ class YoloV7Detector(Detector):
             if RANK is not None:
                 os.environ["RANK"] = RANK
             self.dataset = dataset
+            
             return self
         else:
             return self

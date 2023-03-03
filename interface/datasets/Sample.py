@@ -267,10 +267,122 @@ class Sample:
         s.detection.boxes2d.append(Box2d())
         s.detection.boxes2d[0].x = 150
         s.detection.boxes2d[0].y = 325
-        s.detection.boxes2d[0].w = 125
+        s.detection.boxes2d[0].w = 135
         s.detection.boxes2d[0].h = 175
-        s.detection.boxes2d[0].c = 1
+        s.detection.boxes2d[0].c = 2
         s.detection.boxes2d[0].cn = "car"
+
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[-1].x = 344
+        s.detection.boxes2d[-1].y = 353
+        s.detection.boxes2d[-1].w = 80
+        s.detection.boxes2d[-1].h = 80
+        s.detection.boxes2d[-1].c = 2
+        s.detection.boxes2d[-1].cn = "car"
+
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[-1].x = 429
+        s.detection.boxes2d[-1].y = 346
+        s.detection.boxes2d[-1].w = 50
+        s.detection.boxes2d[-1].h = 65
+        s.detection.boxes2d[-1].c = 2
+        s.detection.boxes2d[-1].cn = "car"
+
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[-1].x = 471
+        s.detection.boxes2d[-1].y = 346
+        s.detection.boxes2d[-1].w = 30
+        s.detection.boxes2d[-1].h = 65
+        s.detection.boxes2d[-1].c = 2
+        s.detection.boxes2d[-1].cn = "car"
+
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[-1].x = 515
+        s.detection.boxes2d[-1].y = 305
+        s.detection.boxes2d[-1].w = 10
+        s.detection.boxes2d[-1].h = 10
+        s.detection.boxes2d[-1].c = 2
+        s.detection.boxes2d[-1].cn = "car"
+
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[-1].x = 503
+        s.detection.boxes2d[-1].y = 310
+        s.detection.boxes2d[-1].w = 10
+        s.detection.boxes2d[-1].h = 10
+        s.detection.boxes2d[-1].c = 2
+        s.detection.boxes2d[-1].cn = "car"
+
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[-1].x = 491
+        s.detection.boxes2d[-1].y = 313
+        s.detection.boxes2d[-1].w = 10
+        s.detection.boxes2d[-1].h = 10
+        s.detection.boxes2d[-1].c = 2
+        s.detection.boxes2d[-1].cn = "car"
+
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[-1].x = 485
+        s.detection.boxes2d[-1].y = 316
+        s.detection.boxes2d[-1].w = 10
+        s.detection.boxes2d[-1].h = 10
+        s.detection.boxes2d[-1].c = 2
+        s.detection.boxes2d[-1].cn = "car"
+
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[-1].x = 502
+        s.detection.boxes2d[-1].y = 328
+        s.detection.boxes2d[-1].w = 40
+        s.detection.boxes2d[-1].h = 62
+        s.detection.boxes2d[-1].c = 2
+        s.detection.boxes2d[-1].cn = "car"
+
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[-1].x = 540
+        s.detection.boxes2d[-1].y = 360
+        s.detection.boxes2d[-1].w = 30
+        s.detection.boxes2d[-1].h = 30
+        s.detection.boxes2d[-1].c = 2
+        s.detection.boxes2d[-1].cn = "car"
+
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[-1].x = 544
+        s.detection.boxes2d[-1].y = 349
+        s.detection.boxes2d[-1].w = 30
+        s.detection.boxes2d[-1].h = 10
+        s.detection.boxes2d[-1].c = 2
+        s.detection.boxes2d[-1].cn = "car"
+
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[-1].x = 565
+        s.detection.boxes2d[-1].y = 350
+        s.detection.boxes2d[-1].w = 20
+        s.detection.boxes2d[-1].h = 20
+        s.detection.boxes2d[-1].c = 2
+        s.detection.boxes2d[-1].cn = "car"
+
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[-1].x = 593
+        s.detection.boxes2d[-1].y = 351
+        s.detection.boxes2d[-1].w = 15
+        s.detection.boxes2d[-1].h = 30
+        s.detection.boxes2d[-1].c = 2
+        s.detection.boxes2d[-1].cn = "car"
+
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[-1].x = 600
+        s.detection.boxes2d[-1].y = 355
+        s.detection.boxes2d[-1].w = 30
+        s.detection.boxes2d[-1].h = 40
+        s.detection.boxes2d[-1].c = 2
+        s.detection.boxes2d[-1].cn = "car"
+
+        s.detection.boxes2d.append(Box2d())
+        s.detection.boxes2d[-1].x = 604
+        s.detection.boxes2d[-1].y = 352
+        s.detection.boxes2d[-1].w = 30
+        s.detection.boxes2d[-1].h = 40
+        s.detection.boxes2d[-1].c = 2
+        s.detection.boxes2d[-1].cn = "car"
 
         return s
     def fromFiftyOne(fiftyoneSample: "fo.Sample") -> "Sample":
@@ -423,7 +535,7 @@ class Sample:
         return self
     
     @staticmethod
-    def show(t: torch.Tensor, wait: bool = False, name="Image"):
+    def show(t: torch.Tensor, wait: bool = False, name="Image") -> int:
         import cv2
         if len(t.shape) == 4:
             t = t[0]

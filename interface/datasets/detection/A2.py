@@ -48,6 +48,7 @@ class A2Detection(DetectionDataset):
     images: List[A2Group]
     def __init__(self, txtFile:str=None) -> None:
         if txtFile is None:
+            self.images = []
             return
         import pathlib
         self.root = pathlib.Path(txtFile).parent
@@ -98,14 +99,12 @@ class A2Detection(DetectionDataset):
         return coco
 
     def __len__(self):
-        if self.CD is not None:
+        if self.images is not None:
             if self.max is not None:
-                return min(len(self.CD)-self.min,self.max)
-            return len(self.CD)
+                return min(len(self.images)-self.min,self.max)
+            return len(self.images)
         return 0
 
-    def __len__(self):
-        return len(self.images)
     def __getitem__(self, index: int) -> Sample:
         if isinstance(index,slice):
             values=[]

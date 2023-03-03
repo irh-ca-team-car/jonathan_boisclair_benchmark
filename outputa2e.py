@@ -63,12 +63,12 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                 model.load_state_dict(torch.load("a2e/"+detector+".pth", map_location=device), strict=False)
             except:
                 pass
-        else:
+        if True:
             model.train()
             optimizer = torch.optim.Adamax(model.parameters())
             epochs = tqdm(range(100), leave=False)
             for b in epochs:
-                inner = tqdm(Batch.of(datasets[1][1].withMax(180),4), leave=False)
+                inner = tqdm(Batch.of(datasets[1][1].withMax(180),2), leave=False)
                 for cocoSamp in inner:
                     model.train()
                     cocoSamp=apply(cocoSamp,[FLIR_FIX,"cuda:0"])
