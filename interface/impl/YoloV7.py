@@ -44,7 +44,6 @@ class YoloV7Detector(Detector):
         self.isTrain=False
         #data/hyp.scratch.p5.yaml
         self.model = Model(self.model_path, ch=3, nc=len(self.dataset.classesList())).autoshape()
-        self.model.conf = 0.0000005
         #self.model = ModelEMA(self.model)
         #self.model = attempt_load([self.model_path], map_location="cpu")
         self.stride = int(self.model.stride.max())  # model stride
@@ -142,7 +141,6 @@ class YoloV7Detector(Detector):
                 self.model.load_state_dict(state_dict,strict=False)
             except:
                 pass
-            self.model.conf = 0.0000005
             if RANK is not None:
                 os.environ["RANK"] = RANK
             self.dataset = dataset
@@ -171,9 +169,17 @@ class YoloV7Detector(Detector):
             for img in range(rgb.shape[0]):
                 detectionImages : Detection = sample[img].detection
                 for box in detectionImages.boxes2d:
-                    targets.append([
+                    bx= [
                         img, box.c, (box.x+box.w/2)/640.0,(box.y+box.h/2)/640.0,box.w/640.0,box.h/640.0
-                    ])
+                    ]
+                    if box.x < 0: continue
+                    if box.y < 0: continue
+                    if box.w < 10: continue
+                    if box.h < 10: continue
+                    if box.x+box.w >=640: continue
+                    if box.y+box.h >=640: continue
+
+                    targets.append(bx)
 
             if len(targets)>0:
                 targets = torch.tensor(targets).float()

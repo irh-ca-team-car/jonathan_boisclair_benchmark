@@ -49,10 +49,13 @@ class A2Detection(DetectionDataset):
     def __init__(self, txtFile:str=None) -> None:
         if txtFile is None:
             self.images = []
+            self.min=0
+            self.max=None
             return
         import pathlib
         self.root = pathlib.Path(txtFile).parent
-        
+        self.min=0
+        self.max=None
         self.images = []
         
         f = open(txtFile,"r+")
