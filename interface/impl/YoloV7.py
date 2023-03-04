@@ -1,4 +1,4 @@
-from interface.datasets.Sample import Size
+from ..datasets.Sample import Size
 from ..detectors.Detector import *
 from ..detectors.Detection import *
 from ..datasets.detection import DetectionDataset
