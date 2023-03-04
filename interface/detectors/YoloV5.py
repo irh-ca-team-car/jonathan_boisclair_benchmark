@@ -1,5 +1,5 @@
 
-from interface.datasets.detection import DetectionDataset
+from ..datasets.detection import DetectionDataset
 from .Detector import Detector
 from ..datasets import Sample, Box2d,Detection, Size
 import torch
