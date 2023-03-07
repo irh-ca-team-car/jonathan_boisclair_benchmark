@@ -74,6 +74,9 @@ class Detector(nn.Module):
         if isinstance(ret,list):
             ret= sum(ret)
         return ret
+    @staticmethod
+    def optimizer(model):
+        return torch.optim.Adamax(model.parameters())
 
 class TorchVisionDetector(Detector):
     model:torch.nn.Module

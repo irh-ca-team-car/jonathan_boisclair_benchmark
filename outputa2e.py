@@ -18,6 +18,9 @@ configs = [
     #("VCAE6","yolov5n"),
     #("Identity","yolov5n"),
     #("DenseFuse","yolov5n"),
+    ("VCAE6","yolov8n"),
+    ("Identity","yolov8n"),
+    ("DenseFuse","yolov8n"),
     ("VCAE6","yolov7-tiny"),
     ("Identity","yolov7-tiny"),
     ("DenseFuse","yolov7-tiny"),
@@ -26,14 +29,14 @@ configs = [
 ]
 
 datasets : List[Tuple[str,DetectionDataset]] = [
-    ("A2",A2W(A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"))),
-    ("FLIR_CONVERTED",A2W(A2Detection("data/FLIR_CONVERTED/all.csv")))]
+    ("A2",(A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"))),
+    ("FLIR_CONVERTED",(A2Detection("data/FLIR_CONVERTED/all.csv").withMax(180)))]
 datasets_train : List[Tuple[str,DetectionDataset]] = [
-    ("A2",A2W(A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"))),
-    ("FLIR_CONVERTED",A2W(A2Detection("data/FLIR_CONVERTED/all.csv")))]
+    ("A2",(A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"))),
+    ("FLIR_CONVERTED",(A2Detection("data/FLIR_CONVERTED/all.csv").withMax(180)))]
 datasets_eval : List[Tuple[str,DetectionDataset]] = [
-    ("A2",A2W(A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"))),
-    ("FLIR_CONVERTED",A2W(A2Detection("data/FLIR_CONVERTED/all.csv")))]
+    ("A2",(A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"))),
+    ("FLIR_CONVERTED",(A2Detection("data/FLIR_CONVERTED/all.csv").withMax(180)))]
 def addCSV(dataset, iti, detector, mAP):
     line = f"{dataset},{iti},{detector},{float(mAP)}"
     file1 = open("SOTA_A2E.csv", "a") # append mode
@@ -48,11 +51,11 @@ except:
 device = "cuda:0"
 
 preScale = ScaleTransform(640, 640)
-randomCrop = RandomCropAspectTransform(400,400,0.2,True)
+randomCrop = RandomCropAspectTransform(600,600,0.2,True)
 transform2 = ScaleTransform(480, 352)
-rotation = RandomRotateTransform([0,1,2,3,4,5,6,7,8,9,10,359,358,357,356,355,354,353,352,351,350])
+rotation = RandomRotateTransform([*range(0,20),*range(340,360)])
 autoContrast = AutoContrast()
-transforms = [autoContrast,rotation,randomCrop,preScale]
+transforms = [autoContrast,preScale,rotation,randomCrop,preScale]
 
 def smart_optimizer(model, name='Adam', lr=2.4e-5, momentum=0.9, decay=1e-6):
     import torch.nn as nn

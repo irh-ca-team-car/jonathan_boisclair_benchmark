@@ -10,3 +10,6 @@
 [submodule "interface/impl/yolov8"]
 	path = interface/impl/yolov8
 	url = git@github.com:irh-ca-team-car/yolov8.git
+[submodule "interface/impl/a2_det"]
+	path = interface/impl/a2_det
+	url = git@github.com:irh-ca-team-car/pytorch_ros.git

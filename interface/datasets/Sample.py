@@ -738,7 +738,7 @@ class Detection:
             raise Exception("Argument sample must be sample or tensor")
         target = self.toTorchVisionTarget("cpu")
         if len(self.boxes2d) > 0:
-            labels = [b.cn for b in self.boxes2d]
+            labels = [b.cn+"@"+str(b.cf) for b in self.boxes2d]
             if colors is not None:
                 colors = [c for c in colors]
                 i=0
