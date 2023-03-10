@@ -738,7 +738,7 @@ class Detection:
             raise Exception("Argument sample must be sample or tensor")
         target = self.toTorchVisionTarget("cpu")
         if len(self.boxes2d) > 0:
-            labels = [b.cn+"@"+str(b.cf) for b in self.boxes2d]
+            labels = [b.cn+"@"+str(b.cf) if b.cf > 0.01 else b.cn for b in self.boxes2d]
             if colors is not None:
                 colors = [c for c in colors]
                 i=0
@@ -757,7 +757,7 @@ class Detection:
         ret= torch.tensor([[x.x,x.y,x.x+x.w,x.y+x.h,x.c-1]for x in self.boxes2d]).to(device)
         if(len(ret.shape) == 1):
             ret = ret.view(0,5)
-        return ret.to(self.dev)
+        return ret.to(device)
     def toX1Y1X2Y2CFC(self,device=None)-> torch.Tensor:
         if device is None:
             device = self.device

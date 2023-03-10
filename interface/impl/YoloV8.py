@@ -115,8 +115,6 @@ class YoloV8Detector(Detector):
     def adaptTo(self, dataset):
 
         nc = len(dataset.classesList())
-        self.trainer.data['nc'] = nc
-
         from .yolov8.ultralytics.nn.tasks import DetectionModel
         state_dict = self.det.state_dict()
         self.model.model = DetectionModel(self.model_name+".yaml",ch=3, nc=nc,verbose=False)
