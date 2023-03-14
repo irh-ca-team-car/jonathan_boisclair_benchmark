@@ -248,7 +248,9 @@ class A2DetInitiator():
     def __call__(self):
         return A2Det(self.sep,self.nc,self.mdl,self.input_size)
 
-for k in range(14):
+#for k in range(14):
+if True:
+    k=8
     m=["src/distributed/research-config/proof-of-concept-split-ssd-attention/models/model-ssd-vgg.cfg",
     "src/distributed/research-config/proof-of-concept-split-ssd-attention/models/model-ssd-alexnet.cfg",
     "src/distributed/research-config/proof-of-concept-split-ssd-attention/models/model-ssd-cae.cfg",

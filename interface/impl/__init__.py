@@ -5,6 +5,7 @@ from .EffDet.model import getEfficientDetImpl
 from ..datasets.detection import DetectionDataset
 from .YoloV7 import *
 from .YoloV8 import *
+from .A2Det import *
 import torch
 
 
