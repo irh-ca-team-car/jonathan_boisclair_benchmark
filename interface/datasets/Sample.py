@@ -546,17 +546,20 @@ class Sample:
         elif t.shape[0] ==1:
             np_ = t[0].detach().numpy()
         
-        cv2.imshow(name, np_)
-        # for i in range(30):
+        try:
+            cv2.imshow(name, np_)
+            # for i in range(30):
 
-        if wait:
-            while True:
-                cv2.imshow(name, np_)
-                k = cv2.waitKey(1)
-                if k == 27:  # Esc key to stop
-                    break
-        else:
-            return cv2.waitKey(1)
+            if wait:
+                while True:
+                    cv2.imshow(name, np_)
+                    k = cv2.waitKey(1)
+                    if k == 27:  # Esc key to stop
+                        break
+            else:
+                return cv2.waitKey(1)
+        except:
+            pass
 class Box2d:
     x: float
     y: float
