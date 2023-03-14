@@ -116,7 +116,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
         if True:
             model.train()
             optimizer = smart_optimizer(model)
-            epochs = tqdm(range(1000), leave=False)
+            epochs = tqdm(range(10000), leave=False)
             for b in epochs:
                 dts = datasets[1][1].withMax(180)
                 bts = Batch.of(dts,20)
@@ -132,6 +132,8 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                             losses.backward()
                             optimizer.step()
                         optimizer.zero_grad()
+                    if losses.item() < 0.17*len(cocoSamp):
+                        break
                     inner.desc = str(losses.item())
                     del losses
                     model.eval()

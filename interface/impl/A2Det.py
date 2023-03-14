@@ -28,7 +28,7 @@ from .a2_det.src.scripts.pytorch_parse_config import *
 from .a2_det.src.scripts.pytorch_network import get_module,set_input_size, get_input,get_frequency, get_module_list,set_nb_class,set_nb_chan,set_layer_sep,get_extra, get_layers,get_input_size
 from .a2_det.src.scripts.pytorch_network import build_simpler_ng as build_network_simpler
 from .a2_det.src.scripts.MultiboxLoss import MultiboxLoss
-from .a2_det.src.scripts.box_utils import SSDSpec, SSDBoxSizes, generate_ssd_priors, convert_locations_to_boxes, convert_boxes_to_locations
+from .a2_det.src.scripts.box_utils import SSDSpec, SSDBoxSizes, generate_ssd_priors, convert_locations_to_boxes, convert_boxes_to_locations, center_form_to_corner_form
 
 a2_dir = os.path.join(pathlib.Path(__file__).parent.absolute(), "a2_det")
 
@@ -38,12 +38,12 @@ center_variance = 0.1
 size_variance = 0.2
 
 specs = [
-    SSDSpec(38, 8, SSDBoxSizes(30, 60), [2]),
-    SSDSpec(19, 16, SSDBoxSizes(60, 111), [2, 3]),
-    SSDSpec(10, 32, SSDBoxSizes(111, 162), [2, 3]),
-    SSDSpec(5, 64, SSDBoxSizes(162, 213), [2, 3]),
-    SSDSpec(3, 100, SSDBoxSizes(213, 264), [2]),
-    SSDSpec(1, 300, SSDBoxSizes(264, 315), [2])
+    SSDSpec(38, 8/300.0, SSDBoxSizes(0.1, 0.2), [2]),
+    SSDSpec(19, 16/300.0, SSDBoxSizes(60/300.0, 111/300.0), [2, 3]),
+    SSDSpec(10, 32/300.0, SSDBoxSizes(111/300.0, 162/300.0), [2, 3]),
+    SSDSpec(5, 64/300.0, SSDBoxSizes(162/300.0, 213/300.0), [2, 3]),
+    SSDSpec(3, 100/300.0, SSDBoxSizes(213/300.0, 264/300.0), [2]),
+    SSDSpec(1, 300/300.0, SSDBoxSizes(264/300.0, 315/300.0), [2])
 ]
 
 
@@ -79,7 +79,7 @@ class A2Det(Detector):
         return self.dataset.classesList().__len__()
     def build(self):
         self.model = build_network_simpler(self.model_path, True,sep=self.sep, nb_chan=self.nc, nb_class=len(self.dataset.classesList())+1).to(self.device)
-        self.priors = generate_ssd_priors(specs, 300)
+        self.priors = generate_ssd_priors(specs, 1)
         self.priors=self.priors.to(self.device)
         self.target_transform = MatchPrior(self.priors, center_variance, size_variance, 0.5)
 
@@ -109,7 +109,9 @@ class A2Det(Detector):
         rst = self.model(rgb)
         confidences,locations=self.extract()
         boxes=convert_locations_to_boxes(locations, self.priors,center_variance,size_variance)#cxcyhw
-        confidences = torch.softmax(confidences.float(),2)
+        boxes=center_form_to_corner_form(boxes)#x1,y1,x2,y2
+        boxes[:,:,0:2] -= boxes[:,:,2:]#x1,y1,w,h
+        confidences = torch.log_softmax(confidences.float(),2)
 
         result=[]
         for i in range(confidences.shape[0]):
@@ -131,8 +133,8 @@ class A2Det(Detector):
             cf= torch.where(torch.isnan(cf),cf,0)
             loc= torch.where(torch.isnan(loc),loc,0)
 
-            negative_x = torch.logical_and(loc[:,0] > -10,loc[:,0] + loc[:,2] < 310)
-            negative_y = torch.logical_and(loc[:,1] > -10,loc[:,1] + loc[:,3] < 310)
+            negative_x = torch.logical_and(loc[:,0] > -0.03,loc[:,0] + loc[:,2] < 1.03)
+            negative_y = torch.logical_and(loc[:,1] > -0.03,loc[:,1] + loc[:,3] < 1.03)
             mask = torch.logical_and(negative_x,negative_y)
             cf = cf[mask,:]
             loc = loc[mask,:]
@@ -147,11 +149,10 @@ class A2Det(Detector):
                 box.c = int(torch.argmax(cf[b,1:]))+1
                 box.cf = float(cf[b,box.c-1])
 
-                box.h = float(loc[b,3]*o_shape[3]/300.0)#*o_shape[3]
-                box.w = float(loc[b,2]*o_shape[2]/300.0)#*o_shape[2]
-
-                box.x = float(loc[b,0]*o_shape[3]/300.0) - box.w/2 #*o_shape[3]
-                box.y = float(loc[b,1]*o_shape[2]/300.0) - box.h/2 #*o_shape[2]
+                box.x = float(loc[b,0]*o_shape[3])
+                box.y = float(loc[b,1]*o_shape[2])
+                box.h = float(loc[b,2]*o_shape[3])
+                box.w = float(loc[b,3]*o_shape[2])
                 
                 if torch.any(torch.isnan(torch.tensor([box.c,box.cf,box.x,box.y,box.w,box.h]))):continue
                 
@@ -216,17 +217,18 @@ class A2Det(Detector):
             target = [t.detection.toX1Y1X2Y2C(self.device) for t in target]
         else:
             target = [target.detection.toX1Y1X2Y2C(self.device)]
-        tmp = [(t[:,0:4]/300,t[:,4].type(torch.long)) for t in target]
+        tmp = [(t[:,0:4]/300.0,t[:,4].type(torch.long)) for t in target]
         tmp = [self.applyTransform(x) for x in tmp]
 
         outputs_locations, outputs_labels= [torch.cat([y[x].reshape(1, *y[x].shape) for y in tmp]) for x in range(len(tmp[0]))]
-        
+        boxes=convert_locations_to_boxes(outputs_locations, self.priors,center_variance,size_variance)#cxcyhw
+
         # print(target[0])
-        # print(outputs_locations[outputs_labels>0,:],outputs_labels[outputs_labels>0])
+        # print(boxes[outputs_labels>0,:],outputs_labels[outputs_labels>0])
         # exit(0)
 
         confidence, locations = self.extract()
-        confidence=torch.softmax(confidence.float(),2)
+        #confidence=torch.log_softmax(confidence.float(),2)
 
         regression_loss, classification_loss= self.criterion(confidence, locations, outputs_labels, outputs_locations)  # TODO CHANGE BOXES
         
