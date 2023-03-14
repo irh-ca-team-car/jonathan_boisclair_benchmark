@@ -85,8 +85,8 @@ class A2Det(Detector):
 
     def load_state_dict(self, state_dict, strict: bool = False):
         return self.model.load_state_dict(state_dict, strict)
-    def state_dict(self):
-        return self.model.state_dict()
+    def state_dict(self,**kw):
+        return self.model.state_dict(**kw)
     def train(self):
         pass
     def eval(self):
@@ -171,7 +171,6 @@ class A2Det(Detector):
   
     def adaptTo(self, dataset):
         if self.dataset != dataset:
-            
             state_dict = self.model.state_dict()
             self.dataset = dataset
             self.build()
