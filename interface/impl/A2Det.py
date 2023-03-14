@@ -127,11 +127,11 @@ class A2Det(Detector):
             #argmax_cf = torch.BoolTensor(size= [confidences[i].shape])
             #argmax_loc = torch.BoolTensor(size= [boxes[i].shape])
 
-            cf = confidences[i,argmax_cf].view(-1,self.nb_class+1)
+            cf = confidences[i,argmax_cf].view(-1,self.nb_class+1).float()
             loc = boxes[i,argmax_loc].view(-1,4)
 
-            cf= torch.where(torch.isnan(cf),cf,0)
-            loc= torch.where(torch.isnan(loc),loc,0)
+            cf= torch.where(torch.isnan(cf.float()),cf.float(),torch.tensor(0.0).float())
+            loc= torch.where(torch.isnan(loc.float()),loc.float(),torch.tensor(0.0).float())
 
             negative_x = torch.logical_and(loc[:,0] > -0.03,loc[:,0] + loc[:,2] < 1.03)
             negative_y = torch.logical_and(loc[:,1] > -0.03,loc[:,1] + loc[:,3] < 1.03)
