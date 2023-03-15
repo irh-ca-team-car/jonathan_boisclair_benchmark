@@ -135,8 +135,8 @@ class A2Det(Detector):
             cf = confidences[i,argmax_cf].view(-1,self.nb_class+1).float()
             loc = boxes[i,argmax_loc].view(-1,4)
 
-            cf= torch.where(torch.isnan(cf.float()),cf.float(),torch.tensor(0.0).float())
-            loc= torch.where(torch.isnan(loc.float()),loc.float(),torch.tensor(0.0).float())
+            cf= torch.where(torch.isnan(cf.float()),cf.float(),torch.tensor(0.0).to(cf.device).float())
+            loc= torch.where(torch.isnan(loc.float()),loc.float(),torch.tensor(0.0).to(cf.device).float())
 
             negative_x = torch.logical_and(loc[:,0] > -0.03,loc[:,0] + loc[:,2] < 1.03)
             negative_y = torch.logical_and(loc[:,1] > -0.03,loc[:,1] + loc[:,3] < 1.03)

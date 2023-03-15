@@ -78,10 +78,6 @@ for n,param in model.model.named_parameters():
 d=model.state_dict()
 weight_names= set(d.keys())
 
-missing = weight_names - param_names
-
-print(missing)
-
 #print(model.model)
 print(losses)
 
@@ -101,15 +97,10 @@ except BaseException as e:
 losses: torch.Tensor = (model.calculateLoss([sample]))
 print(losses)
 
-
 sd = model.state_dict()
 
 validate_state_dicts(d,sd)
-print(d.keys())
-exit(0)
 optimizer=YoloV8Detector.optimizer(model)
-
-
 
 det = model.forward([sample])
 det = model.forward(sample)
