@@ -19,18 +19,18 @@ configs = [
     #("VCAE6","yolov5n"),
     #("Identity","yolov5n"),
     #("DenseFuse","yolov5n"),
-    ("VCAE6","yolov8n"),
-    ("Identity","yolov8n"),
-    ("DenseFuse","yolov8n"),
-    # ("VCAE6","A2_DET_vgg_8"),
-    # ("Identity","A2_DET_vgg_8"),
-    # ("DenseFuse","A2_DET_vgg_8"),
-    # ("VCAE6","A2_DET_alexnet_8"),
-    # ("Identity","A2_DET_alexnet_8"),
-    # ("DenseFuse","A2_DET_alexnet_8"),
-    # ("VCAE6","A2_DET_cae_8"),
-    # ("Identity","A2_DET_cae_8"),
-    # ("DenseFuse","A2_DET_cae_8"),
+    # ("VCAE6","yolov8n"),
+    # ("Identity","yolov8n"),
+    # ("DenseFuse","yolov8n"),
+    ("VCAE6","A2_DET_vgg_8"),
+    ("Identity","A2_DET_vgg_8"),
+    ("DenseFuse","A2_DET_vgg_8"),
+    ("VCAE6","A2_DET_alexnet_8"),
+    ("Identity","A2_DET_alexnet_8"),
+    ("DenseFuse","A2_DET_alexnet_8"),
+    ("VCAE6","A2_DET_cae_8"),
+    ("Identity","A2_DET_cae_8"),
+    ("DenseFuse","A2_DET_cae_8"),
     #("VCAE6","yolov7-tiny"),
     #("Identity","yolov7-tiny"),
     #("DenseFuse","yolov7-tiny"),
@@ -41,15 +41,18 @@ configs = [
 datasets : List[Tuple[str,DetectionDataset]] = [
     ("A2",(A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"))),
     ("FLIR_CONVERTED",(A2Detection("data/FLIR_CONVERTED/all.csv").withMax(180))),
-    ("PST900", PST900Detection())]
+    #("PST900", PST900Detection())
+    ]
 datasets_train : List[Tuple[str,DetectionDataset]] = [
     ("A2",(A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"))),
     ("FLIR_CONVERTED",(A2Detection("data/FLIR_CONVERTED/all.csv").withMax(180))),
-    ("PST900", PST900Detection())]
+    #("PST900", PST900Detection())
+    ]
 datasets_eval : List[Tuple[str,DetectionDataset]] = [
     ("A2",(A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"))),
     ("FLIR_CONVERTED",(A2Detection("data/FLIR_CONVERTED/all.csv").withMax(180))),
-    ("PST900", PST900Detection())]
+    #("PST900", PST900Detection())
+    ]
 def addCSV(dataset, iti, detector, mAP):
     line = f"{dataset},{iti},{detector},{float(mAP)}"
     file1 = open("SOTA_A2E.csv", "a") # append mode
