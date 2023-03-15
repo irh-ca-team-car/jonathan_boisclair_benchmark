@@ -15,28 +15,27 @@ import torch
 from tqdm import tqdm
 
 from interface.transforms.TorchVisionFunctions import AutoContrast
-configs = [
-    #("VCAE6","yolov5n"),
-    #("Identity","yolov5n"),
-    #("DenseFuse","yolov5n"),
-    # ("VCAE6","yolov8n"),
-    # ("Identity","yolov8n"),
-    # ("DenseFuse","yolov8n"),
-    ("VCAE6","A2_DET_vgg_8"),
-    ("Identity","A2_DET_vgg_8"),
-    ("DenseFuse","A2_DET_vgg_8"),
-    ("VCAE6","A2_DET_alexnet_8"),
-    ("Identity","A2_DET_alexnet_8"),
-    ("DenseFuse","A2_DET_alexnet_8"),
-    ("VCAE6","A2_DET_cae_8"),
-    ("Identity","A2_DET_cae_8"),
-    ("DenseFuse","A2_DET_cae_8"),
-    #("VCAE6","yolov7-tiny"),
-    #("Identity","yolov7-tiny"),
-    #("DenseFuse","yolov7-tiny"),
-    #("Identity","ssd"),
-    #("Identity","fasterrcnn_resnet50_fpn"),
-]
+import socket
+print(socket.gethostname())
+hostname = socket.gethostname()
+if hostname == "irh-xavier":
+    configs = [
+        ("VCAE6","A2_DET_vgg_8"),
+        ("Identity","A2_DET_vgg_8"),
+        ("DenseFuse","A2_DET_vgg_8"),
+        ("VCAE6","A2_DET_alexnet_8"),
+        ("Identity","A2_DET_alexnet_8"),
+        ("DenseFuse","A2_DET_alexnet_8"),
+        ("VCAE6","A2_DET_cae_8"),
+        ("Identity","A2_DET_cae_8"),
+        ("DenseFuse","A2_DET_cae_8"),
+    ]
+else:
+    configs = [
+        ("VCAE6","yolov8n"),
+        ("Identity","yolov8n"),
+        ("DenseFuse","yolov8n"),
+    ]
 
 datasets : List[Tuple[str,DetectionDataset]] = [
     ("A2",(A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"))),
