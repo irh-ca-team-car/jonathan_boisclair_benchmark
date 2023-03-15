@@ -96,6 +96,11 @@ class A2Det(Detector):
         self.model = self.model.to(device)
         self.priors=self.priors.to(self.device)
         return self
+    def named_parameters(self):
+        return self.model.named_parameters()
+    def parameters(self):
+        return self.model.parameters()
+    
     @torch.inference_mode()
     def _forward(self, rgb:torch.Tensor,lidar:torch.Tensor,thermal:torch.Tensor, target=None, dataset=None):
         rgb = rgb.to(self.device)
