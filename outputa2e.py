@@ -13,6 +13,7 @@ from interface.transforms import apply, FLIR_FIX
 from interface.transforms.RandomCut import RandomCropAspectTransform
 from interface.transforms.RandomRotate import RandomRotateTransform
 from interface.transforms.Scale import ScaleTransform
+from interface.classifiers import Classifier
 import torch
 from tqdm import tqdm
 
@@ -83,6 +84,11 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
         model = Detector.named(detector)
         #if "yolo" not in detector:
         model = model.adaptTo(dataset).to(device)
+        if "A2" in detector:
+            if "vgg" in detector:
+                model.best_fit(Classifier.named("vgg11"))
+            if "alexnet" in "detector":
+                model.best_fit(Classifier.named("alexnet"))
 
         if os.path.exists("a2e/"+detector+".pth"):
             try:
