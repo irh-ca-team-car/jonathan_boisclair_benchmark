@@ -240,6 +240,14 @@ class A2Det(Detector):
     @staticmethod
     def optimizer(model):
         return torch.optim.Adamax(model.parameters(),lr=2e-3, weight_decay=1e-6)
+    
+    def freeze_backbone(self):
+        for name,param in self.named_parameters():
+            if "header" not in name:
+                param.requires_grad = False
+    def unfreeze_backbone(self):
+        for name,param in self.named_parameters():
+            param.requires_grad = True
 
 
 class A2DetInitiator():
