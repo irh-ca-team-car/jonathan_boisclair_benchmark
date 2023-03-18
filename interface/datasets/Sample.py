@@ -732,6 +732,7 @@ class Detection:
         d.boxes2d = [x for x in self.boxes2d if int(x.c) == int(c)]
         d.boxes3d = [x for x in self.boxes3d if int(x.c) == int(c)]
         return d
+    @torch.no_grad()
     def onImage(self, sample:Union[Sample,torch.Tensor], colors:List[Tuple[int,int,int]]=None, width=4)->torch.Tensor:
         if isinstance(sample,Sample):
             img = (sample.getRGB()*255.0).byte()
@@ -739,6 +740,7 @@ class Detection:
             img = sample
         else :
             raise Exception("Argument sample must be sample or tensor")
+        img = img.to("cpu")
         target = self.toTorchVisionTarget("cpu")
         if len(self.boxes2d) > 0:
             labels = [b.cn+"@"+str(b.cf) if b.cf > 0.01 else b.cn for b in self.boxes2d]

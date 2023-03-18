@@ -100,7 +100,81 @@ class A2Det(Detector):
         return self.model.named_parameters()
     def parameters(self):
         return self.model.parameters()
-    
+    @staticmethod
+    def __n_fit(list1,list2,diff):
+        n=0
+        idx = -len(list2)
+        while idx+diff < len(list2):
+            try:
+                if idx <0: continue
+                if idx + diff < 0: continue
+                if idx >= len(list1): continue
+
+                if list1[idx][1] == list2[idx+diff][1]:
+                    n+=1
+            finally:
+                idx+=1
+        return n
+    @staticmethod
+    def __b_fit(list1,list2):
+        n=0
+        b,bn=0,0
+        m=max(len(list1),len(list2))
+        n = -m
+        while n<m:
+            nfit = A2Det.__n_fit(list1,list2,n)
+            if nfit > bn:
+                bn = nfit
+                b=n
+            n+=1
+        return b
+    @staticmethod
+    def __make_dict(state_dict,list1,list2,diff):
+        d = dict()
+        idx = -len(list2)
+        while idx+diff < len(list2):
+            try:
+                if idx <0: continue
+                if idx + diff < 0: continue
+                if idx >= len(list1): continue
+                if list1[idx][1] == list2[idx+diff][1]:
+                    d[list2[idx+diff][0]] = state_dict[list1[idx][0]]
+            finally:
+                idx+=1
+        return d
+
+
+    def best_fit(self, backbone:nn.Module):
+        sd = dict(backbone.named_parameters())
+        cd = dict(self.named_parameters())
+        sd=([(name,tensor.shape) for name,tensor in sd.items() if "features" in name])
+        cd=([(name,tensor.shape) for name,tensor in cd.items()])
+
+        # print("backbone:")
+
+        w1 = [x for x in sd if "weight" in x[0]]
+        b1 = [x for x in sd if "bias" in x[0]]
+        # for i in w1: print(i)
+        # for i in b1: print(i)
+        
+        # print("current")
+
+        w2 = [x for x in cd if "weight" in x[0]]
+        b2 = [x for x in cd if "bias" in x[0]]
+        # for i in w2: print(i)
+        # for i in b2: print(i)
+
+        wfit = A2Det.__b_fit(w1,w2)
+        bfit = A2Det.__b_fit(b1,b2)
+
+        dictw = A2Det.__make_dict(dict(backbone.named_parameters()), w1,w2,wfit)
+        dictb = A2Det.__make_dict(dict(backbone.named_parameters()), b1,b2,bfit)
+        dictw.update(dictb)
+        # print("best_fit_w", wfit)
+        # print("best_fit_b", bfit)
+        # print(dictw.keys())
+        self.load_state_dict(dictw)
+
     @torch.inference_mode()
     def _forward(self, rgb:torch.Tensor,lidar:torch.Tensor,thermal:torch.Tensor, target=None, dataset=None):
         rgb = rgb.to(self.device)
