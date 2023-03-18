@@ -26,13 +26,20 @@ class ITI(nn.Module):
         if isinstance(name,ITI):
             return ITI.register(name,clz)
         ITI.registered[name]=clz
+    @staticmethod
     def named(name) -> Type["ITI"]:
-        if isinstance(name,ITI):
-            return ITI.named(name)
-        return ITI.registered[name]
+        try:
+            if name in ITI.registered:
+                return ITI.registered[name]
+            else:
+                return Identity
+        except:
+            return None
+    @staticmethod
     def allRegistered():
         return dict(ITI.registered)
-    def loss(self,s1:Sample, s2:Sample) -> torch.Tensor:
+    @staticmethod
+    def loss(s1:Sample, s2:Sample) -> torch.Tensor:
         device = s1.getRGB().device
         img1 = s1.getRGB()
         img2=  s2.getRGB()
@@ -45,6 +52,9 @@ class ITI_Identity(ITI):
         self.dummyParameter = torch.nn.Parameter(torch.tensor(1.0))
     def _forward(self, x: Sample) -> Sample:
         return x
+    def to(self,device):
+        self.dummyParameter.to(device)
+        return self
 class CAE_ITI(ITI):
     def __init__(self, model) -> None:
         super(CAE_ITI,self).__init__(True)

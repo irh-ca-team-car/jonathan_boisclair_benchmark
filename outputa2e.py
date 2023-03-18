@@ -1,4 +1,6 @@
 from typing import List, Tuple
+import cv2
+import fiftyone
 from interface.datasets.detection.A2 import A2Detection
 from interface.datasets.detection.A2W import A2W
 from interface.datasets.detection.PST900 import PST900Detection
@@ -16,19 +18,12 @@ from tqdm import tqdm
 
 from interface.transforms.TorchVisionFunctions import AutoContrast
 import socket
-print(socket.gethostname())
 hostname = socket.gethostname()
 if hostname == "irh-xavier":
     configs = [
-        ("VCAE6","A2_DET_vgg_8"),
         ("Identity","A2_DET_vgg_8"),
-        ("DenseFuse","A2_DET_vgg_8"),
-        ("VCAE6","A2_DET_alexnet_8"),
         ("Identity","A2_DET_alexnet_8"),
-        ("DenseFuse","A2_DET_alexnet_8"),
-        ("VCAE6","A2_DET_cae_8"),
         ("Identity","A2_DET_cae_8"),
-        ("DenseFuse","A2_DET_cae_8"),
     ]
 else:
     configs = [
@@ -63,7 +58,7 @@ try:
     os.mkdir("a2e")
 except:
     pass
-device = "cuda:0"
+device = "cuda"
 
 preScale = ScaleTransform(640, 640)
 randomCrop = RandomCropAspectTransform(600,600,0.2,True)
@@ -71,44 +66,14 @@ transform2 = ScaleTransform(480, 352)
 rotation = RandomRotateTransform([*range(0,10),*range(350,360)])
 autoContrast = AutoContrast()
 transforms = [autoContrast,preScale,rotation,randomCrop,preScale]
-
-def smart_optimizer(model, name='Adam', lr=2.4e-5, momentum=0.9, decay=1e-6):
-    import torch.nn as nn
-    # YOLOv5 3-param group optimizer: 0) weights with decay, 1) weights no decay, 2) biases no decay
-    g = [], [], []  # optimizer parameter groups
-    bn = tuple(v for k, v in nn.__dict__.items() if 'Norm' in k)  # normalization layers, i.e. BatchNorm2d()
-    for v in model.modules():
-        for p_name, p in v.named_parameters(recurse=0):
-            if p_name == 'bias':  # bias (no decay)
-                g[2].append(p)
-            elif p_name == 'weight' and isinstance(v, bn):  # weight (no decay)
-                g[1].append(p)
-            else:
-                g[0].append(p)  # weight (with decay)
-
-    if name == 'Adam':
-        optimizer = torch.optim.Adam(g[2], lr=lr, betas=(momentum, 0.999))  # adjust beta1 to momentum
-    elif name == 'AdamW':
-        optimizer = torch.optim.AdamW(g[2], lr=lr, betas=(momentum, 0.999), weight_decay=0.0)
-    elif name == 'RMSProp':
-        optimizer = torch.optim.RMSprop(g[2], lr=lr, momentum=momentum)
-    elif name == 'SGD':
-        optimizer = torch.optim.SGD(g[2], lr=lr, momentum=momentum, nesterov=True)
-    else:
-        raise NotImplementedError(f'Optimizer {name} not implemented.')
-
-    optimizer.add_param_group({'params': g[0], 'weight_decay': decay})  # add g0 with weight_decay
-    optimizer.add_param_group({'params': g[1], 'weight_decay': 0.0})  # add g1 (BatchNorm2d weights)
- 
-    return optimizer
-
 for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_train,datasets_eval):
     for iti,detector in configs:
         print(name,iti,detector)
         detections_ = []
         ground_truths=[]
-
-        iti_impl = ITI.named(iti)().to(device)
+        iti_impl = ITI.named(iti)
+        iti_impl = iti_impl()
+        iti_impl=iti_impl.to(device)
         if "CAE" in iti:
             #VCAE6_A2_retinanet_resnet50_fpn_v2.pth
             try:
@@ -126,7 +91,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                 pass
         if True:
             model.train()
-            optimizer = smart_optimizer(model)
+            optimizer = model.optimizer(model)
             epochs = tqdm(range(10000), leave=False)
             for b in epochs:
                 dts = datasets[1][1].withMax(180)
