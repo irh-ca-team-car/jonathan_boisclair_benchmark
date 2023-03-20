@@ -32,7 +32,7 @@ class ITI(nn.Module):
             if name in ITI.registered:
                 return ITI.registered[name]
             else:
-                return Identity
+                return ITI_Identity
         except:
             return None
     @staticmethod
@@ -60,9 +60,9 @@ class CAE_ITI(ITI):
         super(CAE_ITI,self).__init__(True)
         self.model = model
         self.device = "cpu"
-    def to(self,device):
+    def to(self,device, *c,**k):
         self.device = device
-        self.model = self.model.to(device)
+        self.model = self.model.to(device, *c,**k)
         return self
     def getRGBT(x: Sample) -> torch.Tensor:
         img=None
@@ -134,9 +134,9 @@ class DenseFuse_ITI(ITI):
         self.device = "cpu"
         
 
-    def to(self,device):
-        self.model = self.model.to(device)
-        self.fusion_phase = self.fusion_phase.to(device)
+    def to(self,device, *c,**k):
+        self.model = self.model.to(device, *c,**k)
+        self.fusion_phase = self.fusion_phase.to(device, *c,**k)
         self.device=device
         return self
     def getRGBT(x: Sample) -> torch.Tensor:

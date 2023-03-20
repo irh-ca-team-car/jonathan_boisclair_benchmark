@@ -123,3 +123,11 @@ class Cat():
             return torch.cat([v.getRGB().unsqueeze(0) for v in sample],0)
         else:
             return sample.getRGB().unsqueeze(0)
+class ThermalCat():
+    def __init__(self):
+        pass
+    def __call__(self,sample: Union[Sample,List[Sample]]) -> torch.Tensor:
+        if isinstance(sample,list):
+            return torch.cat([v.getRGBT().unsqueeze(0) for v in sample],0)
+        else:
+            return sample.getRGBT().unsqueeze(0)

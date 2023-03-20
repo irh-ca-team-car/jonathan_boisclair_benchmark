@@ -136,55 +136,70 @@ class TorchVisionClassifierInitiator():
     def __call__(self):
         return TorchVisionClassifier(self.initiator,None, **self.kwargs)
 try:
-    TorchVisionClassifier.register("alexnet", TorchVisionClassifierInitiator(torchvision.models.alexnet, torchvision.models.AlexNet_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("densenet121", TorchVisionClassifierInitiator(torchvision.models.densenet121, torchvision.models.DenseNet121_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("densenet161", TorchVisionClassifierInitiator(torchvision.models.densenet161, torchvision.models.DenseNet161_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("densenet169", TorchVisionClassifierInitiator(torchvision.models.densenet169, torchvision.models.DenseNet169_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("densenet201", TorchVisionClassifierInitiator(torchvision.models.densenet201, torchvision.models.DenseNet201_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("convnext_base", TorchVisionClassifierInitiator(torchvision.models.convnext_base, torchvision.models.ConvNeXt_Base_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("convnext_large", TorchVisionClassifierInitiator(torchvision.models.convnext_large, torchvision.models.ConvNeXt_Large_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("convnext_small", TorchVisionClassifierInitiator(torchvision.models.convnext_small, torchvision.models.ConvNeXt_Small_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("convnext_tiny", TorchVisionClassifierInitiator(torchvision.models.convnext_tiny, torchvision.models.ConvNeXt_Tiny_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("alexnet", TorchVisionClassifierInitiator(torchvision.models.alexnet, weights=torchvision.models.AlexNet_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("densenet121", TorchVisionClassifierInitiator(torchvision.models.densenet121, weights=torchvision.models.DenseNet121_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("densenet161", TorchVisionClassifierInitiator(torchvision.models.densenet161, weights=torchvision.models.DenseNet161_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("densenet169", TorchVisionClassifierInitiator(torchvision.models.densenet169, weights=torchvision.models.DenseNet169_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("densenet201", TorchVisionClassifierInitiator(torchvision.models.densenet201, weights=torchvision.models.DenseNet201_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("convnext_base", TorchVisionClassifierInitiator(torchvision.models.convnext_base, weights=torchvision.models.ConvNeXt_Base_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("convnext_large", TorchVisionClassifierInitiator(torchvision.models.convnext_large, weights=torchvision.models.ConvNeXt_Large_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("convnext_small", TorchVisionClassifierInitiator(torchvision.models.convnext_small, weights=torchvision.models.ConvNeXt_Small_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("convnext_tiny", TorchVisionClassifierInitiator(torchvision.models.convnext_tiny, weights=torchvision.models.ConvNeXt_Tiny_Weights.IMAGENET1K_V1))
 
-    TorchVisionClassifier.register("efficientnet_b0", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b0, torchvision.models.EfficientNet_B0_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("efficientnet_b1", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b1, torchvision.models.EfficientNet_B1_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("efficientnet_b2", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b2, torchvision.models.EfficientNet_B2_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("efficientnet_b3", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b3, torchvision.models.EfficientNet_B3_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("efficientnet_b4", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b4, torchvision.models.EfficientNet_B4_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("efficientnet_b5", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b5, torchvision.models.EfficientNet_B5_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("efficientnet_b6", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b6, torchvision.models.EfficientNet_B6_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("efficientnet_b7", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b7, torchvision.models.EfficientNet_B7_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("efficientnet_b0", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b0, weights=torchvision.models.EfficientNet_B0_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("efficientnet_b1", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b1, weights=torchvision.models.EfficientNet_B1_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("efficientnet_b2", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b2, weights=torchvision.models.EfficientNet_B2_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("efficientnet_b3", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b3, weights=torchvision.models.EfficientNet_B3_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("efficientnet_b4", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b4, weights=torchvision.models.EfficientNet_B4_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("efficientnet_b5", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b5, weights=torchvision.models.EfficientNet_B5_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("efficientnet_b6", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b6, weights=torchvision.models.EfficientNet_B6_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("efficientnet_b7", TorchVisionClassifierInitiator(torchvision.models.efficientnet_b7, weights=torchvision.models.EfficientNet_B7_Weights.IMAGENET1K_V1))
 
-    TorchVisionClassifier.register("googlenet", TorchVisionClassifierInitiator(torchvision.models.googlenet, torchvision.models.GoogLeNet_Weights.IMAGENET1K_V1, init_weights=False))
-    TorchVisionClassifier.register("inception_v3", TorchVisionClassifierInitiator(torchvision.models.inception_v3, torchvision.models.Inception_V3_Weights.IMAGENET1K_V1, init_weights=False))
-    TorchVisionClassifier.register("vit_l_32", TorchVisionClassifierInitiator(torchvision.models.vit_l_32, torchvision.models.ViT_L_32_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("vit_b_16", TorchVisionClassifierInitiator(torchvision.models.vit_b_16, torchvision.models.ViT_B_16_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("vit_b_32", TorchVisionClassifierInitiator(torchvision.models.vit_b_32, torchvision.models.ViT_B_32_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("vit_l_16", TorchVisionClassifierInitiator(torchvision.models.vit_l_16, torchvision.models.ViT_L_16_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("googlenet", TorchVisionClassifierInitiator(torchvision.models.googlenet, weights=torchvision.models.GoogLeNet_Weights.IMAGENET1K_V1, init_weights=False))
+    TorchVisionClassifier.register("inception_v3", TorchVisionClassifierInitiator(torchvision.models.inception_v3, weights=torchvision.models.Inception_V3_Weights.IMAGENET1K_V1, init_weights=False))
+    TorchVisionClassifier.register("vit_l_32", TorchVisionClassifierInitiator(torchvision.models.vit_l_32, weights=torchvision.models.ViT_L_32_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("vit_b_16", TorchVisionClassifierInitiator(torchvision.models.vit_b_16, weights=torchvision.models.ViT_B_16_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("vit_b_32", TorchVisionClassifierInitiator(torchvision.models.vit_b_32, weights=torchvision.models.ViT_B_32_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("vit_l_16", TorchVisionClassifierInitiator(torchvision.models.vit_l_16, weights=torchvision.models.ViT_L_16_Weights.IMAGENET1K_V1))
 
-    TorchVisionClassifier.register("vgg11", TorchVisionClassifierInitiator(torchvision.models.vgg11, torchvision.models.VGG11_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("vgg13", TorchVisionClassifierInitiator(torchvision.models.vgg13, torchvision.models.VGG13_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("vgg16", TorchVisionClassifierInitiator(torchvision.models.vgg16, torchvision.models.VGG16_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("vgg19", TorchVisionClassifierInitiator(torchvision.models.vgg19, torchvision.models.VGG19_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("vgg11", TorchVisionClassifierInitiator(torchvision.models.vgg11, weights=torchvision.models.VGG11_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("vgg13", TorchVisionClassifierInitiator(torchvision.models.vgg13, weights=torchvision.models.VGG13_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("vgg16", TorchVisionClassifierInitiator(torchvision.models.vgg16, weights=torchvision.models.VGG16_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("vgg19", TorchVisionClassifierInitiator(torchvision.models.vgg19, weights=torchvision.models.VGG19_Weights.IMAGENET1K_V1))
 
-    TorchVisionClassifier.register("maxvit_t", TorchVisionClassifierInitiator(torchvision.models.maxvit_t, torchvision.models.MaxVit_T_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("maxvit_t", TorchVisionClassifierInitiator(torchvision.models.maxvit_t, weights=torchvision.models.MaxVit_T_Weights.IMAGENET1K_V1))
 
-    TorchVisionClassifier.register("shufflenet_v2_x0_5", TorchVisionClassifierInitiator(torchvision.models.shufflenet_v2_x0_5, torchvision.models.ShuffleNet_V2_X0_5_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("shufflenet_v2_x1_0", TorchVisionClassifierInitiator(torchvision.models.shufflenet_v2_x1_0, torchvision.models.ShuffleNet_V2_X1_0_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("shufflenet_v2_x1_5", TorchVisionClassifierInitiator(torchvision.models.shufflenet_v2_x1_5, torchvision.models.ShuffleNet_V2_X1_5_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("shufflenet_v2_x2_0", TorchVisionClassifierInitiator(torchvision.models.shufflenet_v2_x2_0, torchvision.models.ShuffleNet_V2_X2_0_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("shufflenet_v2_x0_5", TorchVisionClassifierInitiator(torchvision.models.shufflenet_v2_x0_5, weights=torchvision.models.ShuffleNet_V2_X0_5_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("shufflenet_v2_x1_0", TorchVisionClassifierInitiator(torchvision.models.shufflenet_v2_x1_0, weights=torchvision.models.ShuffleNet_V2_X1_0_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("shufflenet_v2_x1_5", TorchVisionClassifierInitiator(torchvision.models.shufflenet_v2_x1_5, weights=torchvision.models.ShuffleNet_V2_X1_5_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("shufflenet_v2_x2_0", TorchVisionClassifierInitiator(torchvision.models.shufflenet_v2_x2_0, weights=torchvision.models.ShuffleNet_V2_X2_0_Weights.IMAGENET1K_V1))
 
-    TorchVisionClassifier.register("mobilenet_v3_large", TorchVisionClassifierInitiator(torchvision.models.mobilenet_v3_large, torchvision.models.MobileNet_V3_Large_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("mobilenet_v3_small", TorchVisionClassifierInitiator(torchvision.models.mobilenet_v3_small, torchvision.models.MobileNet_V3_Small_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("mobilenet_v3_large", TorchVisionClassifierInitiator(torchvision.models.mobilenet_v3_large, weights=torchvision.models.MobileNet_V3_Large_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("mobilenet_v3_small", TorchVisionClassifierInitiator(torchvision.models.mobilenet_v3_small, weights=torchvision.models.MobileNet_V3_Small_Weights.IMAGENET1K_V1))
 
-    TorchVisionClassifier.register("resnet18", TorchVisionClassifierInitiator(torchvision.models.resnet18, torchvision.models.ResNet18_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("resnet34", TorchVisionClassifierInitiator(torchvision.models.resnet34, torchvision.models.ResNet34_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("resnet50", TorchVisionClassifierInitiator(torchvision.models.resnet50, torchvision.models.ResNet50_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("resnet101", TorchVisionClassifierInitiator(torchvision.models.resnet101, torchvision.models.ResNet101_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("resnet152", TorchVisionClassifierInitiator(torchvision.models.resnet152, torchvision.models.ResNet152_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("resnet18", TorchVisionClassifierInitiator(torchvision.models.resnet18, weights=torchvision.models.ResNet18_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("resnet34", TorchVisionClassifierInitiator(torchvision.models.resnet34, weights=torchvision.models.ResNet34_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("resnet50", TorchVisionClassifierInitiator(torchvision.models.resnet50, weights=torchvision.models.ResNet50_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("resnet101", TorchVisionClassifierInitiator(torchvision.models.resnet101, weights=torchvision.models.ResNet101_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("resnet152", TorchVisionClassifierInitiator(torchvision.models.resnet152, weights=torchvision.models.ResNet152_Weights.IMAGENET1K_V1))
 
 except BaseException as e:
-    print("Seems like weights are not implemented, are you using a old pytorch version?",e)
+    def format_exception(e):
+        import sys
+        import traceback
+
+        exception_list = traceback.format_stack()
+        exception_list = exception_list[:-2]
+        exception_list.extend(traceback.format_tb(sys.exc_info()[2]))
+        exception_list.extend(traceback.format_exception_only(sys.exc_info()[0], sys.exc_info()[1]))
+
+        exception_str = "Traceback (most recent call last):\n"
+        exception_str += "".join(exception_list)
+        # Removing the last \n
+        exception_str = exception_str[:-1]
+
+        return exception_str
+    print("Seems like weights are not implemented, are you using a old pytorch version?",format_exception(e))
 
     TorchVisionClassifier.register("alexnet", TorchVisionClassifierInitiator(torchvision.models.alexnet, pretrained=True))
     TorchVisionClassifier.register("densenet121", TorchVisionClassifierInitiator(torchvision.models.densenet121, pretrained=True))

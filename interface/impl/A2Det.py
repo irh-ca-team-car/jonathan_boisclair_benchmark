@@ -18,7 +18,7 @@ import cv2
 import torch
 import torch.backends.cudnn as cudnn
 from numpy import random
-from ..transforms import ScaleTransform, RequiresGrad, Cat
+from ..transforms import ScaleTransform, RequiresGrad, Cat, ThermalCat
 from ..transforms import apply as tf
 
 from .a2_det.src.scripts.pytorch_defineNet import *
@@ -183,9 +183,20 @@ class A2Det(Detector):
         if (len(rgb.shape) ==3):
             rgb = rgb.unsqueeze(0)
             is_batch=False
+        if thermal is not None:
+            if (len(thermal.shape) ==3):
+                thermal = thermal.unsqueeze(0)
+                is_batch=False
         o_shape = rgb.shape
+
         rgb = torch.nn.functional.interpolate(rgb,size=(300,300)) *255.0
-        rst = self.model(rgb)
+        if thermal is not None:
+            thermal = torch.nn.functional.interpolate(thermal,size=(300,300)) *255.0
+        if self.nc ==3:
+            rst = self.model(rgb)
+        else:
+            rst = self.model(torch.cat(rgb,thermal))
+
         confidences,locations=self.extract()
         boxes=convert_locations_to_boxes(locations, self.priors,center_variance,size_variance)#cxcyhw
         boxes=center_form_to_corner_form(boxes)#x1,y1,x2,y2
@@ -288,13 +299,16 @@ class A2Det(Detector):
         
         scale = ScaleTransform(Size(300,300))
         sample = scale(sample)
-        inp = Cat().__call__(sample).to(self.device)
+        cat = Cat() if self.nc == 3 else ThermalCat()
+        inp = cat.__call__(sample).to(self.device)
+
         rst = self.model(inp)
         target= sample
         if isinstance(target,list):
             target = [t.detection.toX1Y1X2Y2C(self.device) for t in target]
         else:
             target = [target.detection.toX1Y1X2Y2C(self.device)]
+
         tmp = [(t[:,0:4]/300.0,t[:,4].type(torch.long)) for t in target]
         tmp = [self.applyTransform(x) for x in tmp]
 
@@ -341,6 +355,7 @@ if True:
     "src/distributed/research-config/proof-of-concept-split-ssd-attention/models/model-ssd-alexnet.cfg",
     "src/distributed/research-config/proof-of-concept-split-ssd-attention/models/model-ssd-cae.cfg",
     "src/distributed/research-config/proof-of-concept-split-ssd-attention/models/model-ssd-densenet.cfg"]
-    for path in m:
-        basename = os.path.basename(path).replace("model-ssd-","").replace(".cfg","")
-        Detector.register("A2_DET_"+basename+"_"+str(k), A2DetInitiator(k,nc=1,mdl=path))
+    for c in [3,4]:
+        for path in m:
+            basename = os.path.basename(path).replace("model-ssd-","").replace(".cfg","")
+            Detector.register(("" if c==3 else "RBGT_")+  "A2_DET_"+basename+"_"+str(k), A2DetInitiator(k,nc=c,mdl=path))

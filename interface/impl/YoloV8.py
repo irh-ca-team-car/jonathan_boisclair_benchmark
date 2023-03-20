@@ -67,6 +67,7 @@ class YoloV8Detector(Detector):
         self.model.to(device)
         self.det.to(device)
         self.device=device
+        self.model.overrides["device"]=device
         return self
     def _forward(self, rgb:torch.Tensor,lidar:torch.Tensor,thermal:torch.Tensor, target=None, dataset=None):
         
@@ -80,8 +81,9 @@ class YoloV8Detector(Detector):
         if not isinstance(rgb,list) and rgb.__class__.__name__ != "Image":
             rgb = torchvision.transforms.ToPILImage()(rgb[0])
 
-        with torch.cuda.amp.autocast(True):
+        with torch.autocast(device_type="cpu" if "cpu" in str(self.device) else "cuda",enabled=True):
             pred = self.model.predict(rgb, augment=False, verbose=False, conf=0.00000005)
+
         result = []
         for pred_ in pred:
             detection = Detection()
@@ -91,7 +93,7 @@ class YoloV8Detector(Detector):
             cls =  pred_.boxes.cpu().cls
             for b in range(dboxes.shape[0]):
                 box = Box2d()
-                box.c = int(dboxes[b].cls)
+                box.c = int(dboxes[b].cls) 
                 box.cf = float(dboxes[b].conf)
                 box.cn = self.dataset.getName(box.c)
               
@@ -110,7 +112,14 @@ class YoloV8Detector(Detector):
     def optimizer(model):
         from yolov8.ultralytics.yolo.engine.trainer import BaseTrainer
         return BaseTrainer.build_optimizer(model)
-
+    def freeze_backbone(self):
+        for name,p in (self.named_parameters()):
+            if ".cv2." not in name and ".cv3." not in name:
+                p.requires_grad_(False)
+        
+    def unfreeze_backbone(self):
+        for name,p in self.named_parameters():
+            p.requires_grad(True)
   
     def adaptTo(self, dataset):
 
@@ -145,8 +154,7 @@ class YoloV8Detector(Detector):
         transforms = [Cat(), RequiresGrad(True) ,self.device]
         sample = ScaleTransform(Size(640,640))(sample)
         rgb = tf(sample,transforms)
-        
-        with torch.cuda.amp.autocast(True):
+        with torch.autocast(device_type="cpu" if "cpu" in str(self.device) else "cuda",enabled=True):
             tensorOut = self.det(rgb)
             targets= []
             for img in range(rgb.shape[0]):

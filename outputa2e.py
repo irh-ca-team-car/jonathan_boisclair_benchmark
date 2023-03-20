@@ -22,9 +22,9 @@ import socket
 hostname = socket.gethostname()
 if hostname == "irh-xavier":
     configs = [
-        ("Identity","A2_DET_vgg_8"),
-        ("Identity","A2_DET_alexnet_8"),
-        ("Identity","A2_DET_cae_8"),
+        ("Identity","RBGT_A2_DET_vgg_8"),
+        ("Identity","RBGT_A2_DET_alexnet_8"),
+        ("Identity","RBGT_A2_DET_cae_8"),
     ]
 else:
     configs = [
@@ -34,19 +34,19 @@ else:
     ]
 
 datasets : List[Tuple[str,DetectionDataset]] = [
+    ("PST900", PST900Detection()),
     ("A2",(A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"))),
     ("FLIR_CONVERTED",(A2Detection("data/FLIR_CONVERTED/all.csv").withMax(180))),
-    #("PST900", PST900Detection())
     ]
 datasets_train : List[Tuple[str,DetectionDataset]] = [
+    ("PST900", PST900Detection()),
     ("A2",(A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"))),
     ("FLIR_CONVERTED",(A2Detection("data/FLIR_CONVERTED/all.csv").withMax(180))),
-    #("PST900", PST900Detection())
     ]
 datasets_eval : List[Tuple[str,DetectionDataset]] = [
+    ("PST900", PST900Detection()),
     ("A2",(A2Detection("/home/boiscljo/git/pytorch_ros/src/distributed/data/fusiondata/all.csv"))),
     ("FLIR_CONVERTED",(A2Detection("data/FLIR_CONVERTED/all.csv").withMax(180))),
-    #("PST900", PST900Detection())
     ]
 def addCSV(dataset, iti, detector, mAP):
     line = f"{dataset},{iti},{detector},{float(mAP)}"
@@ -74,7 +74,9 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
         ground_truths=[]
         iti_impl = ITI.named(iti)
         iti_impl = iti_impl()
-        iti_impl=iti_impl.to(device)
+        iti_impl=iti_impl.to(device, dtype=torch.float32)
+        for p in iti_impl.parameters():
+            p.requires_grad_(False)
         if "CAE" in iti:
             #VCAE6_A2_retinanet_resnet50_fpn_v2.pth
             try:
@@ -89,18 +91,19 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                 model.best_fit(Classifier.named("vgg11"))
             if "alexnet" in "detector":
                 model.best_fit(Classifier.named("alexnet"))
-
+        need_pretrain=True
         if os.path.exists("a2e/"+detector+".pth"):
             try:
                 model.load_state_dict(torch.load("a2e/"+detector+".pth", map_location=device), strict=False)
+                need_pretrain=False
             except:
                 pass
-        if True:
+        if need_pretrain:
             model.train()
             optimizer = model.optimizer(model)
             epochs = tqdm(range(10000), leave=False)
             for b in epochs:
-                dts = datasets[1][1].withMax(180)
+                dts = datasets[2][1].withMax(180)
                 bts = Batch.of(dts,20)
 
                 inner = tqdm(bts, leave=False)
@@ -148,15 +151,27 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
         else:
             dataset_train.images = dataset.images[0:int(len(dataset.images)/2)]
             dataset_eval.images = dataset.images[int(len(dataset.images)/2):]
-
-        if True:
+        need_fine_tune=True
+        if os.path.exists("a2e/"+detector+"_"+name+".fine.pth"):
+            try:
+                model.load_state_dict(torch.load("a2e/"+detector+".pth", map_location=device), strict=False)
+                need_fine_tune=False
+            except:
+                pass
+        if need_fine_tune:
             model.train()
+            try:
+                model.freeze_backbone()
+            except:
+                tqdm.write("Could not freeze backbone, training whole model")
             optimizer = model.optimizer(model)
-            epochs = tqdm(range(100), leave=False)
+            epochs = tqdm(range(200), leave=False)
             for b in epochs:
-                for cocoSamp in tqdm(Batch.of(dataset_train,1), leave=False):
+                l =0 
+                mb=tqdm(Batch.of(dataset_train,8), leave=False)
+                for cocoSamp in mb:
                     model.train()
-                    cocoSamp=apply(cocoSamp,[FLIR_FIX,"cuda:0",ScaleTransform(Size(352,352))])
+                    cocoSamp=apply(cocoSamp,[FLIR_FIX,"cuda:0",ScaleTransform(Size(640,640))])
                     with torch.no_grad():
                         values=iti_impl.forward(cocoSamp)
                     losses: torch.Tensor = (model.calculateLoss(values))
@@ -167,7 +182,9 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                         losses.backward()
                         optimizer.step()
                     optimizer.zero_grad()
-                    epochs.desc = str(losses.item())
+                    mb.desc = str(losses.item())
+                    l+=losses.item()/len(dataset_train)
+                    epochs.desc = str(l)
                     losses = 0
 
                     model.eval()
@@ -188,6 +205,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                         exit()
                 if k == 27:
                     break
+            torch.save(model.state_dict(),"a2e/"+detector+"_"+name+".fine.pth")
 
 
 
@@ -202,7 +220,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
         mAP = MultiImageAveragePrecision(ground_truths, detections_)
 
 
-        precisions = [AveragePrecision(x,y).precision(0.5) for (x,y) in zip(ground_truths,detections_)]
+        precisions = [AveragePrecision(x,y).precision(0.10) for (x,y) in zip(ground_truths,detections_)]
 
         precision = sum(precisions) / len(precisions)
         #mAP.filter = filter_

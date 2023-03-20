@@ -39,6 +39,10 @@ class Size:
 class LidarSample:
     # stored in X,Y,Z,I,Ring, R,G,B,A,T
     _lidar : torch.Tensor
+    def clone(self) -> "LidarSample":
+        copy = LidarSample()
+        copy._lidar = self._lidar.clone()
+        return copy
     def to(self,device) -> "LidarSample":
         self._lidar = self._lidar.to(device)
         return self
@@ -498,6 +502,8 @@ class Sample:
             return self.getImage()
         elif self.isArgb():
             return self.getImage()[1:4,:,:]
+    def getRGBT(self) -> torch.Tensor:
+        return torch.cat([self.getRGB(),self.getThermal()])
     def getARGB(self) -> torch.Tensor:
         if self.isGray():
             img = self.getImage()
