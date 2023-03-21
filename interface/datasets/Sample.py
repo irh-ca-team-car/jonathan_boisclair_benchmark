@@ -14,6 +14,12 @@ class Size:
     def __init__(self,w,h) -> None:
         self.w=w
         self.h=h
+    @staticmethod
+    def fromTensor(tensor:torch.Tensor) -> "Size":
+        if len(tensor.shape) >2:
+            return Size.fromTensor(tensor[0])
+        shape = tensor.shape
+        return Size(shape[1],shape[0])
     def __repr__(self) -> str:
         return "["+str(self.w)+"x"+str(self.h)+"]"
     def div(self,value):
@@ -244,6 +250,121 @@ class LidarSample:
                 box2d.cn = box3d.cn
                 samp.detection.boxes2d.append(box2d)
         return samp
+class Segmentation:
+    _img : np.ndarray
+    _shapes : List["Shape2d"]
+    _size : Size
+    def __init__(self, _img=None, _shapes=None) -> None:
+        self._img = _img
+        self._shapes = [] if _shapes is None else _shapes
+        self._size = None
+        
+    def scale(self,x=1.0,y=1.0, size=None) -> "Segmentation":
+        newDet = self.clone()
+        if newDet._img is not None:
+            newDet._img=torch.nn.functional.interpolate(torch.from_numpy(newDet._img).unsqueeze(0).unsqueeze(0),size=(size.h,size.w))[0][0].numpy()
+        if newDet._shapes is not None:
+            newDet._shapes = [shape.scale(x,y) for shape in newDet._shapes]
+        newDet._size = size
+        return newDet
+    
+    @staticmethod
+    def FromImage(img: torch.Tensor, classesName:List[str]):
+        seg = Segmentation()
+        import cv2
+        from ..adapters.OpenCV import CVAdapter
+        labels = CVAdapter.toOpenCV1Channel(img)
+        seg._img=labels
+        seg._size = Size.fromTensor(seg._img)
+        
+        for clz in range(len(classesName)):
+            class_blobs = (labels.astype(np.uint32) == clz).astype(np.uint8)
+            contours, hierarchy =cv2.findContours(class_blobs,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
+            for contour in contours:
+                nPts = contour.shape[0]
+
+                box = Shape2d()
+                box.c = clz
+                box.cn = classesName[box.c]
+                box.shape.extend([Point2d(contour[f,0,0],contour[f,0,1]) for f in range(nPts)])
+                box.shape.append(box.shape[0])
+                seg._shapes.append(box)
+        return seg
+    
+    @torch.no_grad()
+    def onImage(self,img:Union["Sample",torch.Tensor], alpha=0.5, colors=None):
+        import cv2
+        from ..adapters.OpenCV import CVAdapter
+        import random
+        adapter = CVAdapter().to(img.device)
+        if isinstance(img,Sample):
+            img = img.getRGB()
+        img: cv2.Mat = adapter.toOpenCV(img)
+        gt = self.groundTruth
+        if colors is None: 
+            colors = [(0,0,0),(255,0,0),(0,255,0),(0,0,255),(128,0,0),(0,128,0),(0,0,128),(128,255,0),(255,128,0),(255,0,128),(128,0,255),(0,128,255),(0,255,128),(128,255,255),(255,128,255),(255,255,128)]
+            while self._img.max() > len(colors):
+                colors.append((random.randint(0,255),random.randint(0,255),random.randint(0,255)))
+        for i,c in enumerate(colors):
+            mask= self._img == i
+            if np.array(c).max() >0:
+                img[mask] = (img[mask]*(1-alpha) + np.array(c)*alpha).astype(img.dtype)
+        
+
+        return adapter.toPytorch(img)
+    @property
+    def groundTruth(self) -> torch.Tensor:
+        import cv2
+        from ..adapters.OpenCV import CVAdapter
+        import random
+        adapter = CVAdapter()
+        if False and self._img is not None:
+            return adapter.toPytorch(self._img)
+        else:
+            if self._size is None: raise Exception("Could not produce ground thruth without knowing size")
+            img = torch.Tensor(self._size.h,self._size.w)
+            img = adapter.toOpenCV1Channel(img)
+            
+            for shape in self._shapes:
+                array = np.array([ 
+                    [[int(pt.x),int(pt.y)]] for pt in shape.shape
+                ])
+                #img = cv2.fillPoly(img,array,shape.c,4)
+                img = cv2.drawContours(img,[array],-1,shape.c,thickness=-1)
+                #raise Exception("#TODO: Implement creation of ground thruth from polygons")
+                #pass
+
+            self._img = img
+            return adapter.toPytorch(self._img)
+
+    def colored(self,colors=None) -> torch.Tensor:
+        return Segmentation.color(self.groundTruth,colors)
+
+    @staticmethod
+    def color(input,colors=None) -> torch.Tensor:
+        import random
+        img = torch.zeros(3,*input.shape, dtype=torch.uint8)
+        if colors is None: 
+            colors = [(0,0,0),(255,0,0),(0,255,0),(0,0,255),(128,0,0),(0,128,0),(0,0,128),(128,255,0),(255,128,0),(255,0,128),(128,0,255),(0,128,255),(0,255,128),(128,255,255),(255,128,255),(255,255,128)]
+            while img.max() > len(colors):
+                colors.append((random.randint(0,255),random.randint(0,255),random.randint(0,255)))
+        for i,c in enumerate(colors):
+            mask= img == i
+            if np.array(c).max() >0:
+                img[mask] = (torch.tensor(c).byte())
+
+
+
+    def __str__(self) -> str:
+        return f"Segmentation(_img={self._img},_shapes={self._shapes})"
+    def __repr__(self) -> str:
+        return self.__str__()
+    def clone(self)-> "Segmentation":
+        newValue = Segmentation()
+        newValue._img= np.copy(self._img) if self._img is not None else None
+        newValue._size = self._size
+        newValue._shapes= [shape.clone() for shape in self._shapes] if self._shapes is not None else None
+        return newValue
 
 class Sample:
     _img : torch.Tensor
@@ -251,7 +372,7 @@ class Sample:
     _lidar : LidarSample
     detection: "Detection"
     classification: "Classification"
-   
+    _segmentation: "Segmentation"
     
     def __init__(self) -> None:
         self.detection = None
@@ -259,6 +380,7 @@ class Sample:
         self._img = None
         self._thermal = None
         self._lidar = None
+        self._segmentation=None
         #self._img = torch.zeros(3,640,640)
         pass
     @staticmethod
@@ -431,6 +553,8 @@ class Sample:
             newSample.detection = self.detection.scale()
         if self.classification is not None:
             newSample.classification = self.classification.clone()
+        if self._segmentation is not None:
+            newSample._segmentation = self._segmentation.clone()
         return newSample
     def crop(self,new_x:int,new_y:int,new_width:int,new_height:int, overlap_to_keep=0.2) -> "Sample":
         newSample = self.clone()
@@ -469,6 +593,11 @@ class Sample:
                 newSample.detection = newSample.detection.scale(x,y)
             else:
                 newSample.detection = newSample.detection.scale(xFactor,yFactor)
+        if newSample._segmentation is not None:
+            if not isinstance(x, Size):
+                newSample._segmentation = newSample._segmentation.scale(x,y)
+            else:
+                newSample._segmentation = newSample._segmentation.scale(xFactor,yFactor, size=x)
 
         return newSample
 
@@ -598,6 +727,60 @@ class Box2d:
 
     def __repr__(self) -> str:
         return self.__str__()
+class Point2d:
+    x: float
+    y: float
+    def __init__(self,x=0,y=0) -> None:
+        self.x=x
+        self.y=y
+    def __mul__(self,pt:Union[int,float,"Point2d"]) -> "Point2d":
+        if not isinstance(pt,Point2d):
+            return self * Point2d(float(pt),float(pt))
+        return Point2d(self.x*pt.x,self.y*pt.y)
+    def clone(self) -> "Point2d":
+        return Point2d(self.x,self.y)
+    def __str__(self) -> str:
+        return f"Point2d({self.x},{self.y})"
+    def __repr__(self) -> str:
+        return self.__str__()
+class Shape2d:
+    c: float
+    cf: float
+    cn: str
+    shape: List[Point2d]
+    _surface : Union[float,None]
+
+    def __init__(self) -> None:
+        self.c = 0
+        self.cf = 0
+        self.cn = ""
+        self.shape=[]
+        self._surface=None
+
+    def scale(self,x=1.0,y=1.0) -> "Shape2d":
+        clone = self.clone()
+        clone.shape = [(p * Point2d(x,y)) for p in self.shape]
+
+        return clone
+    @property
+    def surface(self) -> float:
+        if self._surface is not None: return self._surface
+        return 0 #TODO: Calculate surface from shape
+    
+    def clone(self) -> "Shape2d":
+        newBox = Shape2d()
+        newBox.c = self.c
+        newBox.cn = self.cn
+        newBox.cf = self.cf
+        newBox.shape = [p.clone() for p in self.shape]
+        return newBox
+
+    def __str__(self) -> str:
+        return f"Shape2d[shape:{self.shape},class:{self.c},confidence:{self.cf}]"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+    
 class Quaternion():
     def __init__(self,tensor) -> None:
         self.x = tensor[0]

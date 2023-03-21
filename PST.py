@@ -1,8 +1,9 @@
 import fiftyone as fo
 import fiftyone.zoo as foz
-from interface.datasets import Sample
+from interface.datasets import Sample,Size
 from interface.datasets.Batch import Batch
 from interface.datasets.detection.PST900 import PST900Detection
+from interface.transforms import ScaleTransform
 import torch
 import cv2
 
@@ -27,11 +28,15 @@ def show(t: torch.Tensor,wait: bool = False):
     else:
         cv2.waitKey(1)
 
-data = PST900Detection()
+data = PST900Detection().withSkip(10)
+
+tf = ScaleTransform(Size(800,800))
 
 for sample in data:
     sample :Sample
-
+    sample = tf(sample)
     tensor = sample.detection.onImage(sample, colors=[(128,128,255)])
+    tensor = sample._segmentation.onImage(tensor, alpha=1)
+    tensor = sample._segmentation.colored()
     sample.show(tensor,True)
-    sample.getLidar().view()
+    #sample.getLidar().view()

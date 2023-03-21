@@ -1,5 +1,5 @@
 from typing import Any, List, Tuple
-from .. import Sample, LidarSample
+from .. import Sample, LidarSample, Segmentation
 from .DetectionDataset import DetectionDataset
 from ...detectors.Detection import Detection, Box2d,Box3d
 import torchvision.transforms
@@ -128,6 +128,7 @@ class PST900Detection(DetectionDataset):
         sample.setThermal(thermal)
 
         det = Detection()
+        
         for clz in range(4):
             class_blobs = (labels == clz+1).astype(np.uint8)
             contours, hierarchy =cv2.findContours(class_blobs,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
@@ -142,5 +143,7 @@ class PST900Detection(DetectionDataset):
                 box.h = h_
                 det.boxes2d.append(box)
         sample.setTarget(det)
+
+        sample._segmentation = Segmentation.FromImage(labels, self.classesList())
         return sample
 
