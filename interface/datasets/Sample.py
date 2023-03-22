@@ -250,6 +250,16 @@ class LidarSample:
                 box2d.cn = box3d.cn
                 samp.detection.boxes2d.append(box2d)
         return samp
+class Percentage:
+    __value: float
+    def __init__(self,value) -> None:
+        if value<0 or value>1:
+            raise Exception("Invalid value, must be 0 <= value <= 1")
+        self.__value = value
+    @property
+    def value(self):
+        return self.__value
+
 class Segmentation:
     _img : np.ndarray
     _shapes : List["Shape2d"]
@@ -290,20 +300,42 @@ class Segmentation:
                 box.shape.append(box.shape[0])
                 seg._shapes.append(box)
         return seg
-    
+    @property
+    def detection(self) -> "Detection":
+        import cv2
+        det = Detection() 
+        for shape in self._shapes:
+            array = np.array([ 
+                    [[int(pt.x),int(pt.y)]] for pt in shape.shape
+                ])
+            x_,y_,w_,h_ = cv2.boundingRect(array)
+            box = Box2d()
+            box.c = shape.c
+            box.cn = str(box.c)
+            box.x = x_
+            box.y = y_
+            box.w = w_
+            box.h = h_
+            det.boxes2d.append(box)
+        return det
+
     @torch.no_grad()
-    def onImage(self,img:Union["Sample",torch.Tensor], alpha=0.5, colors=None):
+    def onImage(self,img:Union["Sample",torch.Tensor], alpha:Percentage=Percentage(0.5), colors=None):
         import cv2
         from ..adapters.OpenCV import CVAdapter
         import random
         adapter = CVAdapter().to(img.device)
+        if not isinstance(alpha,Percentage):
+            alpha=Percentage(alpha)
+        alpha = alpha.value
         if isinstance(img,Sample):
-            img = img.getRGB()
+            img = (img.getRGB()*255.0).byte()
         img: cv2.Mat = adapter.toOpenCV(img)
         gt = self.groundTruth
         if colors is None: 
             colors = [(0,0,0),(255,0,0),(0,255,0),(0,0,255),(128,0,0),(0,128,0),(0,0,128),(128,255,0),(255,128,0),(255,0,128),(128,0,255),(0,128,255),(0,255,128),(128,255,255),(255,128,255),(255,255,128)]
-            while self._img.max() > len(colors):
+            in_max = self._img.max()
+            while in_max > len(colors):
                 colors.append((random.randint(0,255),random.randint(0,255),random.randint(0,255)))
         for i,c in enumerate(colors):
             mask= self._img == i
@@ -318,11 +350,11 @@ class Segmentation:
         from ..adapters.OpenCV import CVAdapter
         import random
         adapter = CVAdapter()
-        if False and self._img is not None:
+        if self._img is not None:
             return adapter.toPytorch(self._img)
         else:
             if self._size is None: raise Exception("Could not produce ground thruth without knowing size")
-            img = torch.Tensor(self._size.h,self._size.w)
+            img = torch.zeros(self._size.h,self._size.w)
             img = adapter.toOpenCV1Channel(img)
             
             for shape in self._shapes:
@@ -346,12 +378,15 @@ class Segmentation:
         img = torch.zeros(3,*input.shape, dtype=torch.uint8)
         if colors is None: 
             colors = [(0,0,0),(255,0,0),(0,255,0),(0,0,255),(128,0,0),(0,128,0),(0,0,128),(128,255,0),(255,128,0),(255,0,128),(128,0,255),(0,128,255),(0,255,128),(128,255,255),(255,128,255),(255,255,128)]
-            while img.max() > len(colors):
+            in_max=input.max()
+            while in_max > len(colors):
                 colors.append((random.randint(0,255),random.randint(0,255),random.randint(0,255)))
         for i,c in enumerate(colors):
-            mask= img == i
+            mask= (input == i)
             if np.array(c).max() >0:
-                img[mask] = (torch.tensor(c).byte())
+                if(img[:,mask].shape[1] > 0):
+                    img[:,mask] = (torch.tensor(c).byte()).unsqueeze(1).repeat(1,img[:,mask].shape[1])
+        return img
 
 
 
@@ -370,19 +405,21 @@ class Sample:
     _img : torch.Tensor
     _thermal : torch.Tensor
     _lidar : LidarSample
-    detection: "Detection"
-    classification: "Classification"
+    _detection: "Detection"
+    _classification: "Classification"
     _segmentation: "Segmentation"
     
+
     def __init__(self) -> None:
-        self.detection = None
-        self.classification = None
+        self._detection = None
+        self._classification = None
         self._img = None
         self._thermal = None
         self._lidar = None
         self._segmentation=None
         #self._img = torch.zeros(3,640,640)
         pass
+
     @staticmethod
     def Example() -> "Sample":
         s = Sample()
@@ -511,6 +548,38 @@ class Sample:
         s.detection.boxes2d[-1].cn = "car"
 
         return s
+    @property
+    def device(self) -> torch.device:
+        if self._img is not None: return self._img.device
+        if self._thermal is not None: return self._thermal.device
+        if self._lidar is not None: return self._lidar._lidar.device
+        return torch.device("cpu")
+    @property
+    def segmentation(self) -> "Segmentation":
+        return self._segmentation
+    @segmentation.setter
+    def segmentation(self,value) -> "Segmentation":
+        self._segmentation = value
+        return value
+    @property
+    def detection(self) -> "Detection":
+        if self._detection is not None:
+            return self._detection
+        if self._segmentation is not None:
+            return self._segmentation.detection
+        return None
+    @detection.setter
+    def detection(self,value) -> "Detection":
+        self._detection = value
+        return value
+    @property
+    def classification(self) -> "Classification":
+        return self._classification
+    @classification.setter
+    def classification(self,value) -> "Classification":
+        self._classification = value
+        return value
+    
     def fromFiftyOne(fiftyoneSample: "fo.Sample") -> "Sample":
         s = Sample()
         dict = fiftyoneSample.to_dict()
@@ -927,6 +996,8 @@ class Detection:
             img = (sample.getRGB()*255.0).byte()
         elif isinstance(sample,torch.Tensor):
             img = sample
+            if img.dtype == torch.float32:
+                img = (img*255.0).byte()
         else :
             raise Exception("Argument sample must be sample or tensor")
         img = img.to("cpu")
@@ -940,7 +1011,6 @@ class Detection:
                     colors.append(colors[i])
                     i+=1
                 img = torchvision.utils.draw_bounding_boxes(img,target["boxes"],labels, width=width, colors=colors)
-                
                 pass
             else:
                 img = torchvision.utils.draw_bounding_boxes(img,target["boxes"],labels, width=width)

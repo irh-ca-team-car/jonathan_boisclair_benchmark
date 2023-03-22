@@ -127,23 +127,10 @@ class PST900Detection(DetectionDataset):
         sample.setImage(rgb)
         sample.setThermal(thermal)
 
-        det = Detection()
-        
-        for clz in range(4):
-            class_blobs = (labels == clz+1).astype(np.uint8)
-            contours, hierarchy =cv2.findContours(class_blobs,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-            for contour in contours:
-                x_,y_,w_,h_ = cv2.boundingRect(contour)
-                box = Box2d()
-                box.c = clz+1
-                box.cn = self.getName(box.c)
-                box.x = x_
-                box.y = y_
-                box.w = w_
-                box.h = h_
-                det.boxes2d.append(box)
-        sample.setTarget(det)
-
         sample._segmentation = Segmentation.FromImage(labels, self.classesList())
+        sample._detection = sample._segmentation.detection
+        for box in sample._detection.boxes2d:
+            box.cn = self.getName(box.c)
+        sample._detection.boxes2d = [box for box in sample._detection.boxes2d if box.c >0]
         return sample
 

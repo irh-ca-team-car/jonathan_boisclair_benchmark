@@ -35,8 +35,8 @@ tf = ScaleTransform(Size(800,800))
 for sample in data:
     sample :Sample
     sample = tf(sample)
-    tensor = sample.detection.onImage(sample, colors=[(128,128,255)])
-    tensor = sample._segmentation.onImage(tensor, alpha=1)
-    tensor = sample._segmentation.colored()
+    tensor = sample.segmentation.onImage(sample, alpha=0.6)
+    tensor = sample.detection.onImage(tensor, colors=[(128,128,255)])
+    #tensor = sample._segmentation.colored()
     sample.show(tensor,True)
     #sample.getLidar().view()
