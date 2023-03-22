@@ -59,7 +59,7 @@ try:
     os.mkdir("a2e")
 except:
     pass
-device = "cuda"
+device = "cuda:0"
 
 preScale = ScaleTransform(640, 640)
 randomCrop = RandomCropAspectTransform(600,600,0.2,True)
@@ -109,7 +109,10 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                 inner = tqdm(bts, leave=False)
                 for cocoSamp in inner:
                     model.train()
-                    cocoSamp=apply(cocoSamp,[FLIR_FIX,"cuda:0",*transforms])
+                    maybeFlir = []
+                    if "A2" in name:
+                        maybeFlir.append(FLIR_FIX)
+                    cocoSamp=apply(cocoSamp,[*maybeFlir,"cuda:0",*transforms])
                     for r in tqdm(range(1),leave=False):
                         losses: torch.Tensor = (model.calculateLoss(cocoSamp))
                         optimizer.zero_grad()
@@ -205,7 +208,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                         exit()
                 if k == 27:
                     break
-            torch.save(model.state_dict(),"a2e/"+detector+"_"+name+".fine.pth")
+            torch.save(model.state_dict(),"a2e/"+detector+"_"+iti+"_"+name+".fine.pth")
 
 
 

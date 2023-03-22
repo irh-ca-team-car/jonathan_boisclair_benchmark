@@ -1,10 +1,20 @@
 import torch
-a = torch.randn((8072,6))
 
-print(a.shape)
+class A:
+    def __init__(self) -> None:
+        self.__target=None
+   
+    def setTarget(self,value):
+        self.__target = value
+        return value
+    def getTarget(self):
+        return self.__target 
+    
+    target=property(getTarget,setTarget,None)
 
-argmax = torch.argmax(a,1) > 2
-argmax=argmax.view([*argmax.shape,1]).repeat(1,6)
+a = A()
 
-print(a[argmax].view(-1,6).shape)
 
+print(a.target)
+
+a.target= 1

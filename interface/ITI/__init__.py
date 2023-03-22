@@ -52,7 +52,7 @@ class ITI_Identity(ITI):
         self.dummyParameter = torch.nn.Parameter(torch.tensor(1.0))
     def _forward(self, x: Sample) -> Sample:
         return x
-    def to(self,device):
+    def to(self,device,*c,**k):
         self.dummyParameter.to(device)
         return self
 class CAE_ITI(ITI):
@@ -136,7 +136,7 @@ class DenseFuse_ITI(ITI):
 
     def to(self,device, *c,**k):
         self.model = self.model.to(device, *c,**k)
-        self.fusion_phase = self.fusion_phase.to(device, *c,**k)
+        self.fusion_phase = self.fusion_phase.to(device)
         self.device=device
         return self
     def getRGBT(x: Sample) -> torch.Tensor:

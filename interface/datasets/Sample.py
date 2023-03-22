@@ -288,6 +288,7 @@ class Segmentation:
         seg._size = Size.fromTensor(seg._img)
         
         for clz in range(len(classesName)):
+            if clz==0: continue
             class_blobs = (labels.astype(np.uint32) == clz).astype(np.uint8)
             contours, hierarchy =cv2.findContours(class_blobs,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
             for contour in contours:

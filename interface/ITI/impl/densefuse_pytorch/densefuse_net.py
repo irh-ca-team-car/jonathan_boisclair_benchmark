@@ -37,11 +37,12 @@ class Encoder(nn.Module):
         })
         
     def forward(self, x):
-        x = self.Relu(self.Conv1(x))
-        for i in range(len(self.layers)):
-            out = self.layers['DenseConv'+str(i+1)] ( x )
-            x = torch.cat([x,out],1)
-        return x
+        with torch.autocast(x.device):
+            x = self.Relu(self.Conv1(x))
+            for i in range(len(self.layers)):
+                out = self.layers['DenseConv'+str(i+1)] ( x )
+                x = torch.cat([x,out],1)
+            return x
 
 class DenseFuseNet(nn.Module):
     
