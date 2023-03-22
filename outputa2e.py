@@ -28,8 +28,8 @@ if hostname == "irh-xavier":
     ]
 else:
     configs = [
-        ("VCAE6","yolov8n"),
-        ("Identity","yolov8n"),
+        #("VCAE6","yolov8n"),
+        #("Identity","yolov8n"),
         ("DenseFuse","yolov8n"),
     ]
 
@@ -216,6 +216,8 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
             for sample in tqdm(dataset_eval, leave=False, desc="Evaluating mAP"):
                 sample = sample.scale(Size(640,640)).to(device)
                 ground_truths.append(sample.detection)
+                iti_impl=iti_impl.to(device)
+                model=model.to(device)
                 detected = model(iti_impl(sample))
                 detections_.append(detected)
         def filter_(classIdx):
