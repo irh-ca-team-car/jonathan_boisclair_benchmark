@@ -107,14 +107,18 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                 #need_pretrain=False
             except:
                 pass
+        try:
+            model.freeze_backbone()
+        except:
+            tqdm.write("Could not freeze backbone, training whole model")
         if need_pretrain:
             model.train()
             optimizer = model.optimizer(model)
-            epochs = tqdm(range(10000), leave=False)
+            epochs = tqdm(range(1000), leave=False)
             for b in epochs:
                 dts = datasets[2][1].withMax(180)
                 bts = Batch.of(dts,20)
-
+                model.dataset=dts
                 inner = tqdm(bts, leave=False)
                 for cocoSamp in inner:
                     model.train()
