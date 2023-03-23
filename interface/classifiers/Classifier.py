@@ -135,7 +135,8 @@ class TorchVisionClassifierInitiator():
         pass
     def __call__(self):
         return TorchVisionClassifier(self.initiator,None, **self.kwargs)
-try:
+
+def registerNormal():
     TorchVisionClassifier.register("alexnet", TorchVisionClassifierInitiator(torchvision.models.alexnet, weights=torchvision.models.AlexNet_Weights.IMAGENET1K_V1))
     TorchVisionClassifier.register("densenet121", TorchVisionClassifierInitiator(torchvision.models.densenet121, weights=torchvision.models.DenseNet121_Weights.IMAGENET1K_V1))
     TorchVisionClassifier.register("densenet161", TorchVisionClassifierInitiator(torchvision.models.densenet161, weights=torchvision.models.DenseNet161_Weights.IMAGENET1K_V1))
@@ -183,24 +184,7 @@ try:
     TorchVisionClassifier.register("resnet101", TorchVisionClassifierInitiator(torchvision.models.resnet101, weights=torchvision.models.ResNet101_Weights.IMAGENET1K_V1))
     TorchVisionClassifier.register("resnet152", TorchVisionClassifierInitiator(torchvision.models.resnet152, weights=torchvision.models.ResNet152_Weights.IMAGENET1K_V1))
 
-except BaseException as e:
-    def format_exception(e):
-        import sys
-        import traceback
-
-        exception_list = traceback.format_stack()
-        exception_list = exception_list[:-2]
-        exception_list.extend(traceback.format_tb(sys.exc_info()[2]))
-        exception_list.extend(traceback.format_exception_only(sys.exc_info()[0], sys.exc_info()[1]))
-
-        exception_str = "Traceback (most recent call last):\n"
-        exception_str += "".join(exception_list)
-        # Removing the last \n
-        exception_str = exception_str[:-1]
-
-        return exception_str
-    print("Seems like weights are not implemented, are you using a old pytorch version?",format_exception(e))
-
+def registerOld()
     TorchVisionClassifier.register("alexnet", TorchVisionClassifierInitiator(torchvision.models.alexnet, pretrained=True))
     TorchVisionClassifier.register("densenet121", TorchVisionClassifierInitiator(torchvision.models.densenet121, pretrained=True))
     TorchVisionClassifier.register("densenet161", TorchVisionClassifierInitiator(torchvision.models.densenet161, pretrained=True))
@@ -237,7 +221,8 @@ except BaseException as e:
     TorchVisionClassifier.register("resnet50", TorchVisionClassifierInitiator(torchvision.models.resnet50, pretrained=True))
     TorchVisionClassifier.register("resnet101", TorchVisionClassifierInitiator(torchvision.models.resnet101, pretrained=True))
     TorchVisionClassifier.register("resnet152", TorchVisionClassifierInitiator(torchvision.models.resnet152, pretrained=True))
-
+from ..tools import attemptRegister
+attemptRegister(registerNormal,registerOld)
 
 
 

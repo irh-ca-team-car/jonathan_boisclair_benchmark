@@ -1,0 +1,1 @@
+from .weightRegisterer import attemptRegister
