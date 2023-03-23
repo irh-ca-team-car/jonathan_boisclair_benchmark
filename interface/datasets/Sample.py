@@ -764,7 +764,7 @@ class Sample:
             else:
                 return cv2.waitKey(1)
         except:
-            pass
+            return 0
 class Box2d:
     x: float
     y: float

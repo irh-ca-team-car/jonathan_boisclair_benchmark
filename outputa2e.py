@@ -117,9 +117,10 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
             epochs = tqdm(range(1000), leave=False)
             for b in epochs:
                 dts = datasets[2][1].withMax(180)
-                bts = Batch.of(dts,20)
+                bts = Batch.of(dts,64)
                 model.dataset=dts
                 inner = tqdm(bts, leave=False)
+                k=0
                 for cocoSamp in inner:
                     model.train()
                     maybeFlir = []
@@ -184,7 +185,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
             epochs = tqdm(range(200), leave=False)
             for b in epochs:
                 l =0 
-                mb=tqdm(Batch.of(dataset_train,8), leave=False)
+                mb=tqdm(Batch.of(dataset_train,32), leave=False)
                 for cocoSamp in mb:
                     model.train()
                     if "A2" in name:
