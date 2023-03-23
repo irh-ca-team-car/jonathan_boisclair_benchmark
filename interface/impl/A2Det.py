@@ -195,7 +195,7 @@ class A2Det(Detector):
         if self.nc ==3:
             rst = self.model(rgb)
         else:
-            rst = self.model(torch.cat(rgb,thermal))
+            rst = self.model(torch.cat([rgb,thermal],1))
 
         confidences,locations=self.extract()
         boxes=convert_locations_to_boxes(locations, self.priors,center_variance,size_variance)#cxcyhw
