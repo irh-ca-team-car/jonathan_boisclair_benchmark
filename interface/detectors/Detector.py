@@ -144,8 +144,9 @@ class TorchVisionInitiator():
     
 from functools import partial
 import torchvision
+from ..tools import attemptRegister
 
-try:
+def registerNormal():
     Detector.register("fasterrcnn_mobilenet_v3_large_320_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn, weights=torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.COCO_V1))
     Detector.register("fasterrcnn_mobilenet_v3_large_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_mobilenet_v3_large_fpn, weights=torchvision.models.detection.FasterRCNN_MobileNet_V3_Large_FPN_Weights.COCO_V1))
     Detector.register("fasterrcnn_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_resnet50_fpn, weights=torchvision.models.detection.FasterRCNN_ResNet50_FPN_Weights.COCO_V1))
@@ -153,28 +154,14 @@ try:
     Detector.register("retinanet_resnet50_fpn_v2",TorchVisionInitiator(torchvision.models.detection.retinanet_resnet50_fpn_v2, weights=torchvision.models.detection.RetinaNet_ResNet50_FPN_V2_Weights.COCO_V1))
     Detector.register("ssd",TorchVisionInitiator(torchvision.models.detection.ssd300_vgg16, weights=torchvision.models.detection.SSD300_VGG16_Weights.COCO_V1))
     Detector.register("ssd_lite",TorchVisionInitiator(torchvision.models.detection.ssdlite320_mobilenet_v3_large, weights=torchvision.models.detection.SSDLite320_MobileNet_V3_Large_Weights.COCO_V1.COCO_V1))
-except BaseException as e:
-    def format_exception(e):
-        import sys
-        import traceback
-
-        exception_list = traceback.format_stack()
-        exception_list = exception_list[:-2]
-        exception_list.extend(traceback.format_tb(sys.exc_info()[2]))
-        exception_list.extend(traceback.format_exception_only(sys.exc_info()[0], sys.exc_info()[1]))
-
-        exception_str = "Traceback (most recent call last):\n"
-        exception_str += "".join(exception_list)
-        # Removing the last \n
-        exception_str = exception_str[:-1]
-
-        return exception_str
-    print("Seems like weights are not implemented, are you using a old pytorch version?",format_exception(e))
+def registerOld():
     Detector.register("fasterrcnn_mobilenet_v3_large_320_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn, pretrained=True))
     Detector.register("fasterrcnn_mobilenet_v3_large_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_mobilenet_v3_large_fpn, pretrained=True))
     Detector.register("fasterrcnn_resnet50_fpn",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_resnet50_fpn, pretrained=True))
     Detector.register("ssd",TorchVisionInitiator(torchvision.models.detection.ssd300_vgg16, pretrained=True))
     Detector.register("ssd_lite",TorchVisionInitiator(torchvision.models.detection.ssdlite320_mobilenet_v3_large, pretrained=True))
+       
+attemptRegister(registerNormal,registerOld)
    
 #Incompatible for some reasons
 #Detector.register("fasterrcnn_resnet50_fpn_v2",TorchVisionInitiator(torchvision.models.detection.fasterrcnn_resnet50_fpn_v2, torchvision.models.detection.FasterRCNN_ResNet50_FPN_V2_Weights.COCO_V1))
