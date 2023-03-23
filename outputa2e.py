@@ -28,9 +28,18 @@ if hostname == "irh-xavier":
     ]
 else:
     configs = [
-        #("VCAE6","yolov8n"),
-        #("Identity","yolov8n"),
+        ("VCAE6","yolov8n"),
+        ("Identity","yolov8n"),
         ("DenseFuse","yolov8n"),
+        ("VCAE6","yolov5n"),
+        ("Identity","yolov5n"),
+        ("DenseFuse","yolov5n"), 
+        ("VCAE6","fasterrcnn_resnet50_fpn"),
+        ("Identity","fasterrcnn_resnet50_fpn"),
+        ("DenseFuse","fasterrcnn_resnet50_fpn"),
+        ("VCAE6","ssd_lite"),
+        ("Identity","ssd_lite"),
+        ("DenseFuse","ssd_lite"),
     ]
 
 datasets : List[Tuple[str,DetectionDataset]] = [
@@ -95,7 +104,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
         if os.path.exists("a2e/"+detector+".pth"):
             try:
                 model.load_state_dict(torch.load("a2e/"+detector+".pth", map_location=device), strict=False)
-                need_pretrain=False
+                #need_pretrain=False
             except:
                 pass
         if need_pretrain:
@@ -112,7 +121,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                     maybeFlir = []
                     if "A2" in name:
                         maybeFlir.append(FLIR_FIX)
-                    cocoSamp=apply(cocoSamp,[*maybeFlir,"cuda:0",*transforms])
+                    cocoSamp=apply(cocoSamp,[*maybeFlir,device,*transforms])
                     for r in tqdm(range(1),leave=False):
                         losses: torch.Tensor = (model.calculateLoss(cocoSamp))
                         optimizer.zero_grad()
@@ -174,7 +183,9 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                 mb=tqdm(Batch.of(dataset_train,8), leave=False)
                 for cocoSamp in mb:
                     model.train()
-                    cocoSamp=apply(cocoSamp,[FLIR_FIX,"cuda:0",ScaleTransform(Size(640,640))])
+                    if "A2" in name:
+                        maybeFlir.append(FLIR_FIX)
+                    cocoSamp=apply(cocoSamp,[*maybeFlir,device,preScale])
                     with torch.no_grad():
                         values=iti_impl.forward(cocoSamp)
                     losses: torch.Tensor = (model.calculateLoss(values))
@@ -225,13 +236,15 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
         mAP = MultiImageAveragePrecision(ground_truths, detections_)
 
 
-        precisions = [AveragePrecision(x,y).precision(0.10) for (x,y) in zip(ground_truths,detections_)]
+        precisions = [AveragePrecision(x,y).precision(0.01) for (x,y) in zip(ground_truths,detections_)]
 
         precision = sum(precisions) / len(precisions)
         #mAP.filter = filter_
         #mAP=mAP.mAP(0.01)
 
         addCSV(name,iti,detector,precision)
+    #TODO: Only PST900
+    break
 
 
             
