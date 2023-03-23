@@ -1,4 +1,6 @@
-from typing import List, Literal, Union
+from typing import List, Literal, NamedTuple, Tuple, Union
+
+from attr import dataclass
 from . import Sample, LidarSample
 import torch
 import sqlite3
@@ -18,7 +20,7 @@ class RosbagGroup:
 class RosbagDataset:
     
     data : List[RosbagGroup]
-    def __init__(self, rosbagfile, topics, flir_topic=None, rgb_topic=None) -> None:
+    def __init__(self, rosbagfile, topics, flir_topic=None, rgb_topic=None, rgb_delay=0,pcl_delay=0,flir_delay=0) -> None:
      
         self.rosbagfile = rosbagfile
         self.topics = topics
@@ -26,6 +28,9 @@ class RosbagDataset:
         self.flir_topic = flir_topic
         self.rgb_topic = rgb_topic
         self.pcl_topic = None
+        self.rgb_delay=rgb_delay
+        self.pcl_delay = pcl_delay
+        self.flir_delay=flir_delay
 
         self.parse()
 
@@ -81,19 +86,41 @@ class RosbagDataset:
             'file:'+self.rosbagfile+'?mode=ro', uri=True)
         cur = con.cursor()
         try:
+            @dataclass
+            class DataRow:
+                topic_id:int
+                id:int
+                timestamp:int
+            
+            data: List[DataRow] = []
+
             s = RosbagGroup()
             for row in cur.execute('SELECT topic_id,timestamp,data,id FROM messages'):
                 if row[0] in self.types:
                     type = self.types[row[0]] 
+                    delay=0
                     if type.__name__ == "Image":
                         if row[0] == self.flir_topic:
-                            s.id_flir= row[3]
+                            delay = self.flir_delay
                         elif row[0] == self.rgb_topic:
-                            s.id_img= row[3]
+                            delay = self.rgb_delay
                         else:
-                            s.id_img= row[3]
+                            delay = self.rgb_delay
                     elif  type.__name__ == "PointCloud2":
-                        s.id_pcl= row[3]
+                        delay = self.pcl_delay
+                    data.append(DataRow(row[0], row[3], row[1]+delay))
+            data.sort(key=lambda row:row.timestamp)
+            for row in data:
+                type = self.types[row.topic_id] 
+                if type.__name__ == "Image":
+                    if row.topic_id == self.flir_topic:
+                        s.id_flir= row.id
+                    elif row.topic_id == self.rgb_topic:
+                        s.id_img= row.id
+                    else:
+                        s.id_img= row.id
+                elif  type.__name__ == "PointCloud2":
+                    s.id_pcl= row.id
                     s=self.maybePush(s)
         except BaseException as e:
             print("Playback failure",e)
