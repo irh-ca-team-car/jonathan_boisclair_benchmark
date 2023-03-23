@@ -184,7 +184,7 @@ def registerNormal():
     TorchVisionClassifier.register("resnet101", TorchVisionClassifierInitiator(torchvision.models.resnet101, weights=torchvision.models.ResNet101_Weights.IMAGENET1K_V1))
     TorchVisionClassifier.register("resnet152", TorchVisionClassifierInitiator(torchvision.models.resnet152, weights=torchvision.models.ResNet152_Weights.IMAGENET1K_V1))
 
-def registerOld()
+def registerOld():
     TorchVisionClassifier.register("alexnet", TorchVisionClassifierInitiator(torchvision.models.alexnet, pretrained=True))
     TorchVisionClassifier.register("densenet121", TorchVisionClassifierInitiator(torchvision.models.densenet121, pretrained=True))
     TorchVisionClassifier.register("densenet161", TorchVisionClassifierInitiator(torchvision.models.densenet161, pretrained=True))
