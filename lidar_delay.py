@@ -27,7 +27,6 @@ class PredictionPub(Node):
         self.pub = self.create_publisher(PointCloud2, self.output, 10)
         
     def callback_image(self, data:Image):
-        print("_")
         def thread_function():
             time.sleep(2)
             self.pub.publish(data)

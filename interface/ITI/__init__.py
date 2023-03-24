@@ -53,7 +53,8 @@ class ITI_Identity(ITI):
     def _forward(self, x: Sample) -> Sample:
         return x
     def to(self,device,*c,**k):
-        self.dummyParameter.to(device)
+        
+        self.dummyParameter.to(device,*c,**k)
         return self
 class CAE_ITI(ITI):
     def __init__(self, model) -> None:
