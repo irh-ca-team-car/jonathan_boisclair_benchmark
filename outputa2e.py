@@ -26,21 +26,23 @@ if hostname == "irh-xavier":
         ("Identity","RBGT_A2_DET_alexnet_8"),
         ("Identity","RBGT_A2_DET_cae_8"),
     ]
+    b_size = 64
 else:
     configs = [
-        ("VCAE6","yolov8n"),
+        #("VCAE6","yolov8n"),
         ("Identity","yolov8n"),
-        ("DenseFuse","yolov8n"),
-        ("VCAE6","yolov5n"),
+        #("DenseFuse","yolov8n"),
+        #("VCAE6","yolov5n"),
         ("Identity","yolov5n"),
-        ("DenseFuse","yolov5n"), 
-        ("VCAE6","fasterrcnn_resnet50_fpn"),
+        #("DenseFuse","yolov5n"), 
+        #("VCAE6","fasterrcnn_resnet50_fpn"),
         ("Identity","fasterrcnn_resnet50_fpn"),
-        ("DenseFuse","fasterrcnn_resnet50_fpn"),
-        ("VCAE6","ssd_lite"),
+        #("DenseFuse","fasterrcnn_resnet50_fpn"),
+        #("VCAE6","ssd_lite"),
         ("Identity","ssd_lite"),
-        ("DenseFuse","ssd_lite"),
+        #("DenseFuse","ssd_lite"),
     ]
+    b_size = 2
 
 datasets : List[Tuple[str,DetectionDataset]] = [
     ("PST900", PST900Detection()),
@@ -117,7 +119,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
             epochs = tqdm(range(1000), leave=False)
             for b in epochs:
                 dts = datasets[2][1].withMax(180)
-                bts = Batch.of(dts,64)
+                bts = Batch.of(dts,b_size)
                 model.dataset=dts
                 inner = tqdm(bts, leave=False)
                 k=0
@@ -134,8 +136,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                             losses.backward()
                             optimizer.step()
                         optimizer.zero_grad()
-                    if losses.item() < 0.17*len(cocoSamp):
-                        break
+                    
                     inner.desc = str(losses.item())
                     del losses
                     model.eval()
@@ -164,10 +165,12 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
         #images
         if len(dataset.images) > 1000:
             dataset_train.images = dataset.images[0:300]
-            dataset_eval.images = dataset.images[300:1000]
+            dataset_eval.images = dataset.images[0:300]
+            #dataset_eval.images = dataset.images[300:1000]
         else:
             dataset_train.images = dataset.images[0:int(len(dataset.images)/2)]
-            dataset_eval.images = dataset.images[int(len(dataset.images)/2):]
+            dataset_eval.images = dataset.images[0:int(len(dataset.images)/2)]
+            #dataset_eval.images = dataset.images[int(len(dataset.images)/2):]
         need_fine_tune=True
         if os.path.exists("a2e/"+detector+"_"+name+".fine.pth"):
             try:
@@ -185,9 +188,10 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
             epochs = tqdm(range(200), leave=False)
             for b in epochs:
                 l =0 
-                mb=tqdm(Batch.of(dataset_train,32), leave=False)
+                mb=tqdm(Batch.of(dataset_train,b_size/2), leave=False)
                 for cocoSamp in mb:
                     model.train()
+                    maybeFlir=[]
                     if "A2" in name:
                         maybeFlir.append(FLIR_FIX)
                     cocoSamp=apply(cocoSamp,[*maybeFlir,device,preScale])
@@ -239,9 +243,10 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
         def filter_(classIdx):
             return classIdx <=5
         mAP = MultiImageAveragePrecision(ground_truths, detections_)
-
+        del model
 
         precisions = [AveragePrecision(x,y).precision(0.01) for (x,y) in zip(ground_truths,detections_)]
+        torch.cuda.empty_cache()
 
         precision = sum(precisions) / len(precisions)
         #mAP.filter = filter_
