@@ -301,7 +301,6 @@ class A2Det(Detector):
         sample = scale(sample)
         cat = Cat() if self.nc == 3 else ThermalCat()
         inp = cat.__call__(sample).to(self.device)
-
         rst = self.model(inp)
         target= sample
         if isinstance(target,list):

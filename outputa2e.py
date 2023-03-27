@@ -106,13 +106,13 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
         if os.path.exists("a2e/"+detector+".pth"):
             try:
                 model.load_state_dict(torch.load("a2e/"+detector+".pth", map_location=device), strict=False)
-                #need_pretrain=False
+                need_pretrain=False
             except:
                 pass
-        try:
-            model.freeze_backbone()
-        except:
-            tqdm.write("Could not freeze backbone, training whole model")
+        # try:
+        #     model.freeze_backbone()
+        # except:
+        #     tqdm.write("Could not freeze backbone, training whole model")
         if need_pretrain:
             model.train()
             optimizer = model.optimizer(model)
@@ -197,6 +197,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                     cocoSamp=apply(cocoSamp,[*maybeFlir,device,preScale])
                     with torch.no_grad():
                         values=iti_impl.forward(cocoSamp)
+                   
                     losses: torch.Tensor = (model.calculateLoss(values))
                     #loss_iti = sum([ iti_impl.loss(a, b) for (a,b) in zip(cocoSamp,values)])
                     #losses += loss_iti 
