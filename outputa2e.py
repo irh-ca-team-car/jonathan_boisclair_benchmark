@@ -36,13 +36,13 @@ else:
         ("Identity","yolov5n"),
         #("DenseFuse","yolov5n"), 
         #("VCAE6","fasterrcnn_resnet50_fpn"),
-        ("Identity","fasterrcnn_resnet50_fpn"),
+        #("Identity","fasterrcnn_resnet50_fpn"),
         #("DenseFuse","fasterrcnn_resnet50_fpn"),
         #("VCAE6","ssd_lite"),
-        ("Identity","ssd_lite"),
+        #("Identity","ssd_lite"),
         #("DenseFuse","ssd_lite"),
     ]
-    b_size = 2
+    b_size = 8
 
 datasets : List[Tuple[str,DetectionDataset]] = [
     ("PST900", PST900Detection()),
@@ -116,7 +116,7 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
         if need_pretrain:
             model.train()
             optimizer = model.optimizer(model)
-            epochs = tqdm(range(1000), leave=False)
+            epochs = tqdm(range(400), leave=False)
             for b in epochs:
                 dts = datasets[2][1].withMax(180)
                 bts = Batch.of(dts,b_size)
@@ -165,45 +165,55 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
         #images
         if len(dataset.images) > 1000:
             dataset_train.images = dataset.images[0:300]
-            dataset_eval.images = dataset.images[0:300]
-            #dataset_eval.images = dataset.images[300:1000]
+            #dataset_eval.images = dataset.images[0:300]
+            dataset_eval.images = dataset.images[300:1000]
         else:
             dataset_train.images = dataset.images[0:int(len(dataset.images)/2)]
-            dataset_eval.images = dataset.images[0:int(len(dataset.images)/2)]
-            #dataset_eval.images = dataset.images[int(len(dataset.images)/2):]
+            #dataset_eval.images = dataset.images[0:int(len(dataset.images)/2)]
+            dataset_eval.images = dataset.images[int(len(dataset.images)/2):]
         need_fine_tune=True
+        all_weights = torch.nn.ModuleDict({"iti":iti_impl,"detector":model})
         if os.path.exists("a2e/"+detector+"_"+name+".fine.pth"):
             try:
-                model.load_state_dict(torch.load("a2e/"+detector+".pth", map_location=device), strict=False)
-                need_fine_tune=False
+                # torch.save(model.state_dict(),"a2e/"+detector+"_"+name+".fine.pth")
+                #torch.save(iti_impl.state_dict(),"a2e/"+iti+"_"+name+".fine.pth")
+                model.load_state_dict(torch.load("a2e/"+detector+"_"+name+".pth", map_location=device), strict=False)
+                iti_impl.load_state_dict(torch.load("a2e/"+iti+"_"+name+".pth", map_location=device), strict=False)
+                #need_fine_tune=False
+                pass
             except:
                 pass
         if need_fine_tune:
+            tqdm.write("Fine tuning for 500 epochs")
             model.train()
             try:
                 model.freeze_backbone()
             except:
                 tqdm.write("Could not freeze backbone, training whole model")
             optimizer = model.optimizer(model)
-            epochs = tqdm(range(200), leave=False)
+            #optimizer_iti = model.optimizer(iti_impl)
+            #epochs = tqdm(range(500), leave=False)
+            epochs = tqdm(range(500), leave=False)
             for b in epochs:
                 l =0 
                 mb=tqdm(Batch.of(dataset_train,b_size/2), leave=False)
                 for cocoSamp in mb:
                     model.train()
+                    optimizer.zero_grad()
+                    #optimizer_iti.zero_grad()
                     maybeFlir=[]
                     if "A2" in name:
                         maybeFlir.append(FLIR_FIX)
                     cocoSamp=apply(cocoSamp,[*maybeFlir,device,preScale])
-                    with torch.no_grad():
-                        values=iti_impl.forward(cocoSamp)
+                    values=iti_impl.forward(cocoSamp)
                    
                     losses: torch.Tensor = (model.calculateLoss(values))
                     #loss_iti = sum([ iti_impl.loss(a, b) for (a,b) in zip(cocoSamp,values)])
                     #losses += loss_iti 
-                    optimizer.zero_grad()
+                    
                     if not torch.isnan(losses):
                         losses.backward()
+                        #optimizer_iti.step()
                         optimizer.step()
                     optimizer.zero_grad()
                     mb.desc = str(losses.item())
@@ -229,7 +239,10 @@ for (name,dataset),(_,dataset_train),(_,dataset_eval) in zip(datasets,datasets_t
                         exit()
                 if k == 27:
                     break
-            torch.save(model.state_dict(),"a2e/"+detector+"_"+iti+"_"+name+".fine.pth")
+                torch.save(model.state_dict(),"a2e/"+detector+"_"+name+".fine.pth")
+                torch.save(iti_impl.state_dict(),"a2e/"+iti+"_"+name+".fine.pth")
+            #torch.save(model.state_dict(),"a2e/"+detector+"_"+name+".fine.pth")
+            #torch.save(iti_impl.state_dict(),"a2e/"+iti+"_"+name+".fine.pth")
 
 
 

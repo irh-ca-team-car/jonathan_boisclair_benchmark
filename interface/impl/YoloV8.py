@@ -182,9 +182,12 @@ class YoloV8Detector(Detector):
         self.eval()
         return losses
     def load_state_dict(self, state_dict: Mapping[str, Any], strict: bool = False):
-        self.det = state_dict
-        self.model.model = self.det
-    def state_dict(self):
+        try:
+            self.det = state_dict
+            self.model.model = self.det
+        except BaseException as e:
+            print(e)
+    def state_dict(self,*c,**k):
         return self.det
     
     # def modules(self) -> Iterator[torch.nn.Module]:
