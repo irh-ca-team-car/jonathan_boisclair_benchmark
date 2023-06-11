@@ -25,7 +25,7 @@ class CustomDataset(ClassificationDataset):
             if index > 1:
                 raise StopIteration()
             s = self.vid.__next__()
-            s.classification = Classification(0,self)
+            s.classification = Classification(torch.tensor([0.5,0.5,0,0.5,0.9]),self)
             return s
 dataset = CustomDataset()
 
@@ -49,7 +49,7 @@ def show(t: torch.Tensor,wait: bool = False):
                 break
     else:
         cv2.waitKey(1)
-for (name,clz) in Classifier.getAllRegisteredDetectors().items():
+for (name,clz) in [ list(Classifier.getAllRegisteredDetectors().items())[-1]]:
 #for iti in [ITI.named("DenseFuse")]:
     model :Classifier = clz().to(device).adaptTo(dataset)
     optimizer = torch.optim.Adamax(model.parameters(), lr=2e-2)
@@ -62,6 +62,7 @@ for (name,clz) in Classifier.getAllRegisteredDetectors().items():
             sample = [s.to(device) for s in sample]
             optimizer.zero_grad()
             output = model.forward(sample)
+            tqdm.tqdm.write(str(output))
             loss = model.calculateLoss(sample)
             t.desc = name +" " +str(loss.item())
             loss.backward()

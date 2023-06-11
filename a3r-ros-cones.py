@@ -1,5 +1,7 @@
+from typing import List
 from interface.datasets import Sample
-from interface.datasets.detection.Coco import CocoDetection
+from interface.datasets.detection.Cones import ConesDetection
+from interface.transforms.TorchVisionFunctions import Cat
 import rclpy
 from rclpy.node import Node
 from rclpy.parameter import Parameter
@@ -16,8 +18,6 @@ import torch
 import torchvision
 import zstd
 import cv2
-from apollo_msgs.msg import ApolloperceptionPerceptionObstacles,ApolloperceptionPerceptionObstacle
-
 def tensorToCV2(t:torch.Tensor):
     if len(t.shape) ==4:
         t=t[0]
@@ -49,34 +49,9 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 class PredictionPub(Node):
     model : Detector
-    def param(self, name, default_value=None):
-        node: rclpy.node.Node = self
-        print(name, default_value)
-        if not self.has_parameter(name):
-            self.declare_parameter(name)
-        if(default_value == None):
-            if(self.has_parameter(name)):
-                return self.get_parameter(name).value
-            return self.get_parameter_or(name, rclpy.Parameter(name, rclpy.Parameter.Type.STRING, "")).value
-        if default_value.__class__ == bool:
-            param_type = rclpy.Parameter.Type.BOOL
-        elif default_value.__class__ == float:
-            param_type = rclpy.Parameter.Type.DOUBLE
-        elif default_value.__class__ == int:
-            param_type = rclpy.Parameter.Type.INTEGER
-        else:  # default_value.__class__ == str:
-            param_type = rclpy.Parameter.Type.STRING
-            default_value = str(default_value)
-
-        value = self.get_parameter_or(name, rclpy.Parameter(
-            name, param_type, default_value)).value
-        if value is None:
-            return default_value
-        return value
     def __init__(self) :
         super().__init__('detection_rviz')
         self.output = '/apollo/prediction/perception_obstacles/visualizati_marker_array'
-        self.apollo_topic = self.param("apollo_topic", '/apollo/perception/obstacles/local')
         self.input =  '/zed_wrapper_fl/left/image_rect_color'
         self.sub = self.create_subscription(Image, self.input, self.callback_image, 10)
         self.input2 =  '/zed_wrapper_front/left/image_rect_color'
@@ -87,10 +62,14 @@ class PredictionPub(Node):
         self.pubviz = self.create_publisher(Image, "/apollo/perception/obstacles/viz", 10)
         self.pubvizcom = self.create_publisher(CompressedImage, "/apollo/perception/obstacles/viz/compressed", 10)
         self.stamp = Header().stamp
-        self.pub_apollo = self.create_publisher(ApolloperceptionPerceptionObstacles, self.apollo_topic, 10)
-
         #self.model : Detector = Detector.named("retinanet_resnet50_fpn_v2").to(device)
-        self.model : Detector = Detector.named("ssd_lite").to(device)
+        self.dataset = ConesDetection()
+        self.model : Detector = Detector.named("ssd_lite").adaptTo(self.dataset).to(device)
+
+        try:
+            self.model.load_state_dict(torch.load("cones.pth"))
+        except:
+            pass
         print(self.model.device)
         self.running=False
         
@@ -110,12 +89,33 @@ class PredictionPub(Node):
         g = tensor[:,:,1].unsqueeze(0)
         r = tensor[:,:,2].unsqueeze(0)
 
+        def rgb2hsv_torch(rgb: torch.Tensor) -> torch.Tensor:
+            cmax, cmax_idx = torch.max(rgb, dim=1, keepdim=True)
+            cmin = torch.min(rgb, dim=1, keepdim=True)[0]
+            delta = cmax - cmin
+            hsv_h = torch.empty_like(rgb[:, 0:1, :, :])
+            cmax_idx[delta == 0] = 3
+            hsv_h[cmax_idx == 0] = (((rgb[:, 1:2] - rgb[:, 2:3]) / delta) % 6)[cmax_idx == 0]
+            hsv_h[cmax_idx == 1] = (((rgb[:, 2:3] - rgb[:, 0:1]) / delta) + 2)[cmax_idx == 1]
+            hsv_h[cmax_idx == 2] = (((rgb[:, 0:1] - rgb[:, 1:2]) / delta) + 4)[cmax_idx == 2]
+            hsv_h[cmax_idx == 3] = 0.
+            hsv_h /= 6.
+            hsv_s = torch.where(cmax == 0, torch.tensor(0.).type_as(rgb), delta / cmax)
+            hsv_v = cmax
+            return torch.cat([hsv_h, hsv_s, hsv_v], dim=1)
+        def rgb2hsv(rgb: List[Sample]):
+            tensor = rgb2hsv_torch(Cat().__call__(rgb))
+            for i in range(len(rgb)):
+                rgb[i].setImage(tensor[i])
+            return rgb
+
         s = Sample()
         s.setImage((torch.cat([r,g,b],0).float()/255).to(device))
-        det = self.model.forward(s).filter(0.25).NMS_Pytorch()
+        s = rgb2hsv([s])[0]
+        det = self.model.forward(s).filter(0.20).NMS_Pytorch()
 
         
-        apolloMsg = ApolloperceptionPerceptionObstacles()
+
         outputMsg = MarkerArray()
 
         obs = Marker()
@@ -128,38 +128,17 @@ class PredictionPub(Node):
         for f in det.boxes2d:
             obs = Marker()
             obs.header.frame_id = "car"
-            if CocoDetection.getName(f.c) in ["person"]:
-                obs.type = Marker.MESH_RESOURCE
-                obs.mesh_resource = "package://kia_soul/Man_with_suit.stl"
+            if ConesDetection.getName(f.c) in ["cone"]:
+                obs.type = Marker.CUBE
                 obs.color.r = 0.0
                 obs.color.g = 1.0
                 obs.color.b = 0.0
-                height = 1.5
-                if f.w > f.h:
-                    height = 0.75
-                #obs.type=3 
-            elif CocoDetection.getName(f.c) in ["bicycle","motorcycle"]:
-                obs.type = obs.CUBE
-                obs.color.r = 0.0
-                obs.color.g = 1.0
-                obs.color.b = 1.0
-                height = 2.5
-                #obs.type=4
-            elif CocoDetection.getName(f.c) in ["car","truck","bus"]:
-                obs.type = Marker.MESH_RESOURCE
-                obs.mesh_resource = "package://kia_soul/soul.dae"
-                obs.color.r = 0.0
-                obs.color.g = 1.0
-                obs.color.b = 0.0
-                height = 3
-                #obs.type=5 
-            elif CocoDetection.getName(f.c) in ["stop sign","fire hydrant"]:
-                obs.type = obs.CUBE
-                obs.color.r = 1.0
-                obs.color.g = 0.0
-                obs.color.b = 0.0
-                height = 0.5
-                #obs.type = 0
+
+                obs.scale.x = 1.0
+                obs.scale.y = 1.0
+                obs.scale.z = 0.3
+                obs.color.a = 1.0
+                height = 0.3
             else:
                 continue
             obs.header.frame_id = "car"
@@ -168,17 +147,13 @@ class PredictionPub(Node):
             r = circ / (2*3.14)
             distance= -r
             obs.pose.position.y = float(distance)
+            obs.pose.position.z = -0.8
 
             x = (f.x + f.w/2)
             half_width = s.size().w/2.0
             val = (x - half_width)/s.size().w
             angle = (150/2.0)*val
-            obs.pose.position.x=float(math.tan(angle*0.01745329) * distance);
-                
-            obs.scale.x = 1.0
-            obs.scale.y = 1.0
-            obs.scale.z = 1.0
-            obs.color.a = 1.0
+            obs.pose.position.x=float(math.tan(angle*0.01745329) * distance)
            
             obs.pose.orientation.w = 1.0
             obs.header.stamp = self.get_clock().now().to_msg()
@@ -187,24 +162,8 @@ class PredictionPub(Node):
             #marker.pose.position.z = data.position.z
             obs.id = len(outputMsg.markers)
             outputMsg.markers.append(obs)
-            #apollo format
-            obs_apollo = ApolloperceptionPerceptionObstacle()
-            if CocoDetection.getName(f.c) in ["person"]:
-                obs_apollo.type=3 
-            elif CocoDetection.getName(f.c) in ["bicycle","motorcycle"]:
-                obs_apollo.type=4
-            elif CocoDetection.getName(f.c) in ["car","truck","train","bus"]:
-                obs_apollo.type=5 
-            elif CocoDetection.getName(f.c) in ["stop sign","fire hydrant"]:
-                obs_apollo.type = 0
-
-            obs_apollo.position.x = obs.pose.position.x
-            obs_apollo.position.y = obs.pose.position.y
-
-            apolloMsg.perceptionobstacle.append(obs)
 
         self.running=False
-        self.pub_apollo.publish(apolloMsg)
         self.pub.publish(outputMsg)
         img = det.onImage(s)
         imgMsg = CvBridge().cv2_to_imgmsg(tensorToCV2(img),"bgr8")

@@ -17,7 +17,7 @@ class CVAdapter:
     def toOpenCV1Channel(t:torch.Tensor) ->cv2.Mat:
         import numpy as np
         if isinstance(t,np.ndarray): return t
-        if len(t.shape) ==4:
+        if len(t.shape) ==3:
             t=t[0]
         t = t.cpu()
         np_ = t.detach().numpy()
@@ -26,9 +26,10 @@ class CVAdapter:
         self.device = device
         return self
     def toPytorch(self,np: cv2.Mat) -> torch.Tensor:
-
         if np.dtype == numpy.uint16:
             return torch.tensor(np.astype(numpy.float32)).unsqueeze(0).float() / 2**16
+        if np.dtype == numpy.int64:
+            return torch.tensor(np.astype(numpy.float32)).unsqueeze(0).float()
         elif np.dtype == numpy.uint8:
             tensor = torch.from_numpy(np)
             if len(tensor.shape) == 3 and tensor.shape[2] ==3:
