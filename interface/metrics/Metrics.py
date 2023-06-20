@@ -1,4 +1,7 @@
+from dataclasses import dataclass
 from typing import Callable, Dict, List, Set, Tuple, Union
+
+from interface.datasets.Sample import Segmentation
 
 from ..datasets.detection import DetectionDataset
 from ..detectors.Detection import Detection
@@ -248,3 +251,59 @@ class AveragePrecision:
 
     def pascal(self) -> float:
         return self.calc(0.5)
+  
+@dataclass
+class IOUVal:
+    intersection:float =0
+    union:float =0
+
+    def __add__(self, val2:"IOUVal"):
+        return IOUVal(self.intersection+val2.intersection, self.union+val2.union)
+    
+
+class mIOUAccumulator:
+    def __init__(self, num_cls=21):
+        self.num_cls= num_cls
+        self.values = [IOUVal() for f in range(num_cls)]
+    def acculumate(self,pred:Segmentation, gt:Segmentation):
+        gt1 = pred.groundTruth
+        gt2 = gt.groundTruth
+
+
+        if (gt1.shape != gt2.shape):
+            if gt1.view(-1).shape[0] < gt2.view(-1).shape[0]:
+                gt2 = torch.nn.functional.interpolate(gt2.unsqueeze(0), gt1.shape[1:]).squeeze(0)
+            else:
+                gt1 = torch.nn.functional.interpolate(gt1.unsqueeze(0), gt2.shape[1:]).squeeze(0)
+        for cls in range(self.num_cls):
+            surface1 = gt1.view(-1)==cls
+            surface2 = gt2.view(-1)==cls
+            intersection = torch.logical_and(surface1 , surface2).sum()
+            union = torch.logical_or(surface1 , surface2).sum()
+            self.values[cls] += IOUVal(intersection,union)
+    def val(self ):
+        ious=[]
+        for val in self.values:
+            if val.union >0:
+                ious.append(val.intersection/val.union)
+        return float(torch.tensor(ious).float().mean().item())
+class mIOU:
+    def __init__(self, gt: List[Segmentation], val: List[Segmentation], num_cls=21, verbose = False):
+        self.num_cls= num_cls
+        self.gt = gt
+        self.val = val
+        self.filter = None
+        self.verbose = verbose
+        if len(gt) != len(val):
+            raise Exception("Lenght must match")
+    def __call__(self) -> float:
+        return self.calc()
+    def calc(self) -> float:
+        acc = mIOUAccumulator(self.num_cls)
+
+        for gt,val in zip(self.gt,self.val):
+            acc.acculumate(val,gt)
+        
+        return acc.val()
+
+        

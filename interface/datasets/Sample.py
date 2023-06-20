@@ -785,7 +785,7 @@ class Sample:
             np_ = t.detach().numpy()
             np_ = cv2.cvtColor(np_, cv2.COLOR_BGR2RGB)
         elif t.shape[0] ==1:
-            np_ = t[0].detach().numpy()
+            np_ = t[0].detach().cpu().numpy()
         
         try:
             cv2.imshow(name, np_)

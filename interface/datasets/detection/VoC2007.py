@@ -15,12 +15,14 @@ class VoC2007Detection:
     def withMax(self,max) -> "VoC2007Detection":
         coco = VoC2007Detection()
         coco.data = self.data[:max]
+        self.lazy()
         coco.images = self.images
         coco.A1Classes = self.A1Classes
         return coco
     def withSkip(self,maxValue) -> "VoC2007Detection":
         coco = VoC2007Detection()
         coco.data = self.data[maxValue:]
+        self.lazy()
         coco.images = self.images
         coco.A1Classes = self.A1Classes
         return coco
@@ -29,20 +31,25 @@ class VoC2007Detection:
         coco = VoC2007Detection()
         coco.data = [x for x in self.data]
         random.shuffle( coco.data )
+        self.lazy()
         coco.images = self.images
         coco.A1Classes = self.A1Classes
         return coco
 
+    def lazy(self):
+        if not hasattr(self,"images"):
+            self.images = foz.load_zoo_dataset("voc-2007", split=self.split, **self.kwargs)
+
     def __init__(self, split: Union[Literal["train"],Literal["test"], None]=None,dataset_dir=None, **kwargs) -> None:
         kwargs["dataset_dir"]=dataset_dir
-        
-        self.images = foz.load_zoo_dataset("voc-2007", split=split, **kwargs)
+        self.split = split
+        self.kwargs = kwargs
+        #self.images = foz.load_zoo_dataset("voc-2007", split=split, **kwargs)
         self.dataset_dir=dataset_dir
         # The directory containing the dataset to import
         self.dataset_dir =dataset_dir
 
         # Import the dataset
-        dataset = self.images
 
         #print(dataset.group_media_types)
         #for group in (dataset.iter_groups()):
@@ -57,13 +64,14 @@ class VoC2007Detection:
     def classesList(self):
         if self.A1Classes is None:
             #self.A1Classes =["void", *self.images.get_classes("ground_truth")]
+            self.lazy()
             self.A1Classes = ["void",*self.images.distinct(
                 "ground_truth.detections.label"
             )]
-            print(self.A1Classes)
         return list(self.A1Classes)
     def lazy(self):
         if self.data is None:
+            self.lazy()
             self.data = list(self.images)
         return self
     def getId(self,str: str):
@@ -105,6 +113,7 @@ class VoC2007Detection:
                 values = [v for v in range(index.start,index.stop,index.step)]
             else:
                 values = [v for v in range(index.start,index.stop)]
+            self.lazy()
             values = [v for v in values if v < len(self.images)]
             if len(values)==0:
                 raise StopIteration

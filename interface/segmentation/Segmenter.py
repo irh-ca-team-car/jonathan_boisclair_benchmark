@@ -115,7 +115,7 @@ class TorchVisionSegmenter(Segmenter):
         else:
             return self
     def _forward(self, rgb:torch.Tensor,lidar:torch.Tensor,thermal:torch.Tensor, target=None, dataset=None)->Union[Segmentation,List[Segmentation], torch.tensor]:
-        trs = self.weights.transforms()
+        trs = self.weights.transforms(antialias=True)
         if isinstance(rgb,list):
             return self._forward(torch.cat([trs(v).unsqueeze(0) for v in rgb],0), None,None, target)
         is_list = True
@@ -221,7 +221,7 @@ class SegModSegmenter(Segmenter):
             else:
                 self.model:torch.nn.Module = initiator(num_classes=num_classes, **self.kwarg)
         else:
-            self.model = initiator(weights=weights,**self.kwarg)
+            self.model = initiator(weights=weights,num_classes=21,**self.kwarg)
         self.model.eval()
 
     def adaptTo(self,dataset):
@@ -256,13 +256,17 @@ class SegModSegmenter(Segmenter):
 
             torchvisionresult= self.model.to(self.device).forward(rgb.to(self.device))
             target = torch.cat([t.unsqueeze(0) for t in target],-1)
-            loss = nn.CrossEntropyLoss()
-            return loss.forward(torchvisionresult.permute(0,2,3,1).view(-1,num_class),target.permute(0,2,3,1).view(-1,num_class))
+            
+            loss1 = nn.CrossEntropyLoss()
+            loss2 = nn.MSELoss()
+            def loss(a,b):
+                return (loss1.forward(a,b) )# + loss2.forward(a,b))/2
+            return loss(torchvisionresult.permute(0,2,3,1).reshape(-1,num_class),target.permute(0,2,3,1).reshape(-1,num_class))
             #return sum(loss for loss in loss_dict.values())
+
         torchvisionresult= self.model.to(self.device).forward(rgb.to(self.device))
         normalized_masks = torchvisionresult.softmax(dim=1)
         normalized_masks_2 = torch.max(normalized_masks, dim=1).indices.unsqueeze(1)
-
 
         result=[]
         for i in range(normalized_masks_2.shape[0]):# self.weights.meta["categories"]
@@ -283,7 +287,28 @@ class SegModSegmenter(Segmenter):
     def calculateLoss(self,sample:Sample):
         losses= self.forward(sample, sample)
         return losses
-   
+    def freeze_backbone(self):
+        for name,p in (self.named_parameters()):
+            if "encoder" in name:
+                p.requires_grad_(False)
+        
+    def unfreeze_backbone(self):
+        for name,p in self.named_parameters():
+            p.requires_grad_(True)
+    @staticmethod
+    def optimizer(model, lr=2e-3, lr_encoder=2e-6):
+        g = [], []
+        for v in model.modules():
+            for p_name, p in v.named_parameters(recurse=0):
+                if 'encoder' in p_name:  
+                    g[1].append(p)
+                else:
+                    g[0].append(p) 
+        optim= torch.optim.Adam(g[0],lr=lr)
+        optim.add_param_group({'params': g[1], 'lr': lr_encoder})  # add g1 (BatchNorm2d weights)
+        
+        return optim
+    
 class SegModSegmenterInitiator():
     def __init__(self,model,encoder_name, encoder_weights, classes, **kwarg):
         self.kwarg = kwarg
@@ -294,8 +319,8 @@ class SegModSegmenterInitiator():
         pass
     def initiator(self,test_run=False, **kwargs):
         num_classes = self.classes
-        if "classes" in kwargs:
-            num_classes = kwargs["classes"]
+        if "num_classes" in kwargs:
+            num_classes = kwargs["num_classes"]
         if self.model == "unet":
             return smp.Unet(self.encoder_name,
                             encoder_weights=self.encoder_weights if not test_run else None, 
@@ -344,6 +369,12 @@ class SegModSegmenterInitiator():
                             in_channels=3,
                             classes= num_classes
                             )
+        if self.model == "fpn":
+            return smp.FPN(self.encoder_name,
+                            encoder_weights=self.encoder_weights if not test_run else None, 
+                            in_channels=3,
+                            classes= num_classes
+                            )
         
         return None
     def __call__(self):
@@ -356,7 +387,7 @@ class SegModSegmenterInitiator():
             return False
 
 archs = [
-    "unet","unet++","manet","linknet","pspnet","pan","deeplabv3","deeplabv3+"
+    "unet","unet++","manet","linknet","pspnet","pan","deeplabv3","deeplabv3+","fpn"
 ]
 encoders = [
     "resnet18",
@@ -483,7 +514,7 @@ encoders = [
     "tu-maxvit_large_tf_512",
     "tu-maxvit_nano_rw_256",
     "tu-maxvit_pico_rw_256",
-    "tinynet_a",
+    "tu-tinynet_a",
     "tu-tinynet_b",
     "tu-tinynet_c",
     "tu-tinynet_d",

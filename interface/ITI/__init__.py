@@ -188,3 +188,303 @@ class DenseFuse_ITI(ITI):
        
 
 ITI.register("DenseFuse", DenseFuse_ITI)
+
+
+
+import segmentation_models_pytorch as smp
+
+class SegModITI(ITI):
+    model:torch.nn.Module
+    def __init__(self, initiator,weights=None, num_output=1, **kwarg):
+        super(SegModITI,self).__init__(True)
+        self.weights = weights
+        self.initiator = initiator
+        self.kwarg = kwarg
+        self.model:torch.nn.Module = initiator(num_output=num_output, weights=weights, **self.kwarg)
+        self.model.eval()
+
+    def _forward(self, input:Union[Sample,List[Sample]])->Union[Sample,List[Sample]]:
+        if isinstance(input,list):
+            is_list = True
+        else:
+            input = [input]
+            is_list = False
+        
+        if self.kwarg["in_channels"] ==4:
+            rgb = torch.cat([x.getRGBT().unsqueeze(0) for x in input],0)
+        elif self.kwarg["in_channels"] ==1:
+            rgb = torch.cat([x.getGray().unsqueeze(0) for x in input],0)
+        else: 
+            rgb = torch.cat([x.getRGB().unsqueeze(0) for x in input],0)
+
+        rgb = rgb.to(device=self.device)
+        
+        torchvisionresult= self.model.to(self.device).forward(rgb.to(self.device))
+
+        result=[]
+        for i in range(torchvisionresult.shape[0]):# self.weights.meta["categories"]
+            s = Sample()
+            s.setImage(torchvisionresult[i])
+            result.append(s)
+        if not is_list:
+            return result[0]
+        
+        return result
+    def eval(self):
+        self.model.eval()
+    def train(self):
+        self.model.train()
+    def to(self,device:torch.device):
+        super(ITI,self).to(device)
+        self.model = self.model.to(device)
+        self.device = device
+        return self
+    def loss(self,sample:Sample, sample2:Sample):
+        MSE_fun = nn.MSELoss().to(self.device)
+        return MSE_fun(sample._img, sample2._img)
+    
+    def freeze_backbone(self):
+        for name,p in (self.named_parameters()):
+            if "encoder" in name:
+                p.requires_grad_(False)
+        
+    def unfreeze_backbone(self):
+        for name,p in self.named_parameters():
+            p.requires_grad_(True)
+    @staticmethod
+    def optimizer(model, lr=2e-3, lr_encoder=2e-6):
+        g = [], []
+        for v in model.modules():
+            for p_name, p in v.named_parameters(recurse=0):
+                if 'encoder' in p_name:  
+                    g[1].append(p)
+                else:
+                    g[0].append(p) 
+        optim= torch.optim.Adam(g[0],lr=lr)
+        optim.add_param_group({'params': g[1], 'lr': lr_encoder})  # add g1 (BatchNorm2d weights)
+        
+        return optim
+    
+class SegModITIInitiator():
+    def __init__(self,model,encoder_name, encoder_weights, **kwarg):
+        self.kwarg = kwarg
+        self.model = model
+        self.encoder_name = encoder_name
+        self.encoder_weights = encoder_weights
+        pass
+    def initiator(self,test_run=False, **kwargs):
+        num_output = 1
+        in_channels = 3
+        if "num_output" in kwargs:
+            num_output = kwargs["num_output"]
+        if "in_channels" in kwargs:
+            in_channels = kwargs["in_channels"]
+        if self.model == "unet":
+            return smp.Unet(self.encoder_name,
+                            encoder_weights=self.encoder_weights if not test_run else None, 
+                           in_channels=in_channels,
+                            classes= num_output
+                            )
+        if self.model == "unet++":
+            return smp.UnetPlusPlus(self.encoder_name,
+                            encoder_weights=self.encoder_weights if not test_run else None, 
+                           in_channels=in_channels,
+                            classes= num_output
+                            )
+        if self.model == "manet":
+            return smp.MAnet(self.encoder_name,
+                            encoder_weights=self.encoder_weights if not test_run else None, 
+                           in_channels=in_channels,
+                            classes= num_output
+                            )
+        if self.model == "linknet":
+            return smp.Linknet(self.encoder_name,
+                            encoder_weights=self.encoder_weights if not test_run else None, 
+                           in_channels=in_channels,
+                            classes= num_output
+                            )
+        if self.model == "pspnet":
+            return smp.PSPNet(self.encoder_name,
+                            encoder_weights=self.encoder_weights if not test_run else None, 
+                           in_channels=in_channels,
+                            classes= num_output
+                            )
+        if self.model == "pan":
+            return smp.PAN(self.encoder_name,
+                            encoder_weights=self.encoder_weights if not test_run else None, 
+                           in_channels=in_channels,
+                            classes= num_output
+                            )
+        if self.model == "deeplabv3":
+            return smp.DeepLabV3(self.encoder_name,
+                            encoder_weights=self.encoder_weights if not test_run else None, 
+                           in_channels=in_channels,
+                            classes= num_output
+                            )
+        if self.model == "deeplabv3+":
+            return smp.DeepLabV3Plus(self.encoder_name,
+                            encoder_weights=self.encoder_weights if not test_run else None, 
+                           in_channels=in_channels,
+                            classes= num_output
+                            )
+        if self.model == "fpn":
+            return smp.FPN(self.encoder_name,
+                            encoder_weights=self.encoder_weights if not test_run else None, 
+                           in_channels=in_channels,
+                            classes= num_output
+                            )
+        
+        return None
+    def __call__(self):
+        return SegModITI(self.initiator,**self.kwarg)
+    def test(self):
+        try:
+            #self.initiator(True)
+            return True
+        except:
+            return False
+
+archs = [
+    "unet","unet++","manet","linknet","pspnet","pan","deeplabv3","deeplabv3+","fpn"
+]
+encoders = [
+    "resnet18",
+    "resnet34",
+    "resnet50",
+    "resnet101",
+    "resnet152",
+    "resnext50_32x4d",
+    "resnext101_32x8d",
+    "timm-resnest14d",
+    "timm-resnest26d",
+    "timm-resnest50d",
+    "timm-resnest101e",
+    "timm-resnest200e",
+    "timm-resnest269e",
+    "timm-resnest50d_4s2x40d",
+    "timm-resnest50d_1s4x24d",
+    "timm-res2net50_26w_4s",
+    "timm-res2net101_26w_4s",
+    "timm-res2net50_26w_6s",
+    "timm-res2net50_26w_8s",
+    "timm-res2net50_48w_2s",
+    "timm-res2net50_14w_8s",
+    "timm-res2next50",
+    "timm-regnetx_002",
+    "timm-regnetx_004",
+    "timm-regnetx_006",
+    "timm-regnetx_008",
+    "timm-regnetx_016",
+    "timm-regnetx_032",
+    "timm-regnetx_040",
+    "timm-regnetx_064",
+    "timm-regnetx_080",
+    "timm-regnetx_120",
+    "timm-regnetx_160",
+    "timm-regnetx_320",
+    "timm-regnety_002",
+    "timm-regnety_004",
+    "timm-regnety_006",
+    "timm-regnety_008",
+    "timm-regnety_016",
+    "timm-regnety_032",
+    "timm-regnety_040",
+    "timm-regnety_064",
+    "timm-regnety_080",
+    "timm-regnety_120",
+    "timm-regnety_160",
+    "timm-regnety_320",
+    "timm-gernet_s",
+    "timm-gernet_m",
+    "timm-gernet_l",
+    "senet154",
+    "se_resnet50",
+    "se_resnet101",
+    "se_resnet152",
+    "se_resnext50_32x4d",
+    "se_resnext101_32x4d",
+    "timm-skresnet18",
+    "timm-skresnet34",
+    "timm-skresnext50_32x4d",
+    "densenet121",
+    "densenet169",
+    "densenet201",
+    "densenet161",
+    "inceptionresnetv2",
+    "inceptionv4",
+    "xception",
+    "efficientnet-b0",
+    "efficientnet-b1",
+    "efficientnet-b2",
+    "efficientnet-b3",
+    "efficientnet-b4",
+    "efficientnet-b5",
+    "efficientnet-b6",
+    "efficientnet-b7",
+    "timm-efficientnet-b0",
+    "timm-efficientnet-b1",
+    "timm-efficientnet-b2",
+    "timm-efficientnet-b3",
+    "timm-efficientnet-b4",
+    "timm-efficientnet-b5",
+    "timm-efficientnet-b6",
+    "timm-efficientnet-b7",
+    "timm-efficientnet-l2",
+    "timm-efficientnet-lite0",
+    "timm-efficientnet-lite1",
+    "timm-efficientnet-lite2",
+    "timm-efficientnet-lite3",
+    "timm-efficientnet-lite4",
+    "mobilenet_v2",
+    "timm-mobilenetv3_large_075",
+    "timm-mobilenetv3_large_100",
+    "timm-mobilenetv3_large_minimal_100",
+    "timm-mobilenetv3_small_075",
+    "timm-mobilenetv3_small_100",
+    "timm-mobilenetv3_small_minimal_100",
+    "dpn68",
+    "dpn98",
+    "dpn131",
+    "vgg11",
+    "vgg11_bn",
+    "vgg13",
+    "vgg13_bn",
+    "vgg16",
+    "vgg16_bn",
+    "vgg19",
+    "vgg19_bn",
+    "mit_b0",
+    "mit_b1",
+    "mit_b2",
+    "mit_b3",
+    "mit_b4",
+    "mit_b5",
+    "mobileone_s0",
+    "mobileone_s1",
+    "mobileone_s2",
+    "mobileone_s3",
+    "mobileone_s4s",
+    "tu-maxvit_base_tf_224",
+    "tu-maxvit_base_tf_384",
+    "tu-maxvit_base_tf_512",
+    "tu-maxvit_large_tf_224",
+    "tu-maxvit_large_tf_384",
+    "tu-maxvit_large_tf_512",
+    "tu-maxvit_nano_rw_256",
+    "tu-maxvit_pico_rw_256",
+    "tu-tinynet_a",
+    "tu-tinynet_b",
+    "tu-tinynet_c",
+    "tu-tinynet_d",
+    "tu-tinynet_e",
+]
+for arch in archs:
+    for encoder in encoders:
+        ITI.register(arch+"+"+encoder+"_1->1",SegModITIInitiator(arch, encoder, "imagenet",in_channels=1, num_output = 1))
+        ITI.register(arch+"+"+encoder+"_3->1",SegModITIInitiator(arch, encoder, "imagenet",in_channels=3,num_output = 1))
+        ITI.register(arch+"+"+encoder+"_4->1",SegModITIInitiator(arch, encoder, "imagenet",in_channels=4,num_output = 1))
+
+        ITI.register(arch+"+"+encoder+"_1->3",SegModITIInitiator(arch, encoder, "imagenet",in_channels=1, num_output = 3))
+        ITI.register(arch+"+"+encoder+"_3->3",SegModITIInitiator(arch, encoder, "imagenet",in_channels=3,num_output = 3))
+        ITI.register(arch+"+"+encoder+"_4->3",SegModITIInitiator(arch, encoder, "imagenet",in_channels=4,num_output = 3))
+
