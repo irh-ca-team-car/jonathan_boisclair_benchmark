@@ -7,9 +7,12 @@ from tqdm import tqdm
 import random
 import math
 from interface.transforms.Scale import ScaleTransform
+from interface.ITI.impl.CAEbase.weatheradder.OverlayAdder import OverlayAdder
 dataset = A2Detection("data/FLIR_CONVERTED/all.csv")
 
 device = "cuda:0"
+water = OverlayAdder("interface/ITI/impl/CAEbase/weatheradder/drop").to(device)
+snow = OverlayAdder("interface/ITI/impl/CAEbase/weatheradder/snow").to(device)
 #m_name="unet+tu-tinynet_a"
 m_name="unet+++resnet18_3->3"
 model_1 = ITI.named(m_name)().to(device)
@@ -45,14 +48,20 @@ for name,model_ctr in [(m_name, model_1)]:
 
             optim.zero_grad()
 
-            output = model.forward(cocoSamp)
+            cocoSamp2 = [samp.clone() for samp in cocoSamp]
+            for samp in cocoSamp2:
+                water.add(samp.getRGB(),200,0.2)
+                snow.add(samp.getRGB(),200,0.2)
+                snow.add(samp.getRGB(),10,1)
+
+            output = model.forward(cocoSamp2)
             
             loss = sum([loss_fn(a.getRGB(),b.getRGB()) for a,b in zip(output, cocoSamp)])
             loss.backward()
-            Sample.show(cocoSamp[0].getRGB(), wait=False, name="gt_"+str(0))
+            need_exit = Sample.show(cocoSamp[0].getRGB(), wait=False, name="gt_"+str(0))  == 27
             gray_ = output[0].getRGB()
 
-            need_exit = (Sample.show(gray_.cpu(), wait=False, name=name)) == 27
+            need_exit = need_exit or (Sample.show(gray_.cpu(), wait=False, name=name)) == 27
             optim.step()
 
             optim.zero_grad()
