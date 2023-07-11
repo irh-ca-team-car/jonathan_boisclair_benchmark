@@ -13,8 +13,10 @@ dataset = DetectionDataset.named("voc-2007")
 
 device = "cuda:0"
 #m_name="unet+tu-tinynet_a"
+
 m_name="unet+mit_b1"
 model_1 = Segmenter.named(m_name).to(device)
+
 master_model = Segmenter.named("deeplabv3_resnet50").to(device)
 
 scale = ScaleTransform(224,224)
@@ -39,7 +41,7 @@ for name,model_ctr in [(m_name, model_1)]:
         b_size = min(math.ceil(float(i+1)/25.0),8)
         batch=Batch.of(dataset,b_size)
         iter=0
-
+        print(len(batch))
         for cocoSamp in tqdm(batch):
             cocoSamp = scale(cocoSamp)
             optim.param_groups[0]["lr"] = lambda_group1(iter)

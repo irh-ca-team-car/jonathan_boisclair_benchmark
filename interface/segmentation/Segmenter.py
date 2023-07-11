@@ -2,22 +2,23 @@ from typing import Callable, Dict, List, Union
 import torch
 import torch.nn as nn
 from ..datasets.Sample import Sample,Segmentation,Size
-
+from ..datasets import DetectionDataset
 
 class Segmenter(nn.Module):
     registered_Segmenters: Dict[str,Callable[[],"Segmenter"]] = dict()
-    def __init__(self,num_channel:int, support_batch):
+    dataset: DetectionDataset
+    def __init__(self,num_channel:int, support_batch, dataset=None):
         super(Segmenter,self).__init__()
         
         self.num_channel = num_channel
         self.support_batch = support_batch
         self.device = torch.device("cpu")
-        if not hasattr(self,"dataset"):
-            from ..datasets import DetectionDataset
+        self.dataset = dataset
+        if self.dataset is None:
             self.dataset = DetectionDataset.named("voc-2007")
 
-    def forward(self, x:Sample, target=None, dataset=None) -> Segmentation:
-        if dataset is None:
+    def forward(self, x:Sample, target=None) -> Segmentation:
+        if self.dataset is None:
             from ..datasets import DetectionDataset
             self.dataset = DetectionDataset.named("voc-2007")
         if not isinstance(x,Sample) and not isinstance(x,list):
@@ -28,26 +29,27 @@ class Segmenter(nn.Module):
                     raise Exception("Argument list contains non samples"+str(v.__class__))
             if not self.support_batch:
                 if target is not None:
-                    return sum([self.forward(v[0],target=v[1], dataset=dataset) for v in zip(x,target)])
+                    return sum([self.forward(v[0],target=v[1]) for v in zip(x,target)])
                 
-                return [self.forward(v, dataset=dataset) for v in x]
+                return [self.forward(v) for v in x]
             else:
                 if self.num_channel ==1 :
-                    return self._forward([v.getGray() for v in x],[v.getLidar() for v in x],[v.getThermal() for v in x],target, dataset=dataset)
+                    return self._forward([v.getGray() for v in x],[v.getLidar() for v in x],[v.getThermal() for v in x],target)
                 if self.num_channel ==3 :
-                    return self._forward([v.getRGB() for v in x],[v.getLidar() for v in x],[v.getThermal() for v in x],target, dataset=dataset)
+                    return self._forward([v.getRGB() for v in x],[v.getLidar() for v in x],[v.getThermal() for v in x],target)
                 if self.num_channel ==4 :
-                    return self._forward([v.getARGB() for v in x],[v.getLidar() for v in x],[v.getThermal() for v in x],target, dataset=dataset)
+                    return self._forward([v.getARGB() for v in x],[v.getLidar() for v in x],[v.getThermal() for v in x],target)
         
         if self.num_channel ==1 :
-            return self._forward(x.getGray(), x.getLidar(), x.getThermal(),target, dataset=dataset)
+            return self._forward(x.getGray(), x.getLidar(), x.getThermal(),target)
         if self.num_channel ==3 :
-            return self._forward(x.getRGB(), x.getLidar(), x.getThermal(),target, dataset=dataset)
+            return self._forward(x.getRGB(), x.getLidar(), x.getThermal(),target)
         if self.num_channel ==4 :
-            return self._forward(x.getARGB(), x.getLidar(), x.getThermal(),target, dataset=dataset)
+            return self._forward(x.getARGB(), x.getLidar(), x.getThermal(),target)
         return x
     def adaptTo(self,dataset) -> "Segmenter":
         print("Adapting to ",dataset.getName())
+        self.dataset = dataset
         return self
     def eval(self) -> "Segmenter":
         return self
@@ -210,8 +212,8 @@ import segmentation_models_pytorch as smp
 
 class SegModSegmenter(Segmenter):
     model:torch.nn.Module
-    def __init__(self, initiator,weights=None, num_classes=None, **kwarg):
-        super(SegModSegmenter,self).__init__(3,True)
+    def __init__(self, initiator,weights=None, num_classes=None,dataset:DetectionDataset=None, **kwarg):
+        super(SegModSegmenter,self).__init__(3,True,dataset)
         self.weights = weights
         self.initiator = initiator
         self.kwarg = kwarg
@@ -225,18 +227,15 @@ class SegModSegmenter(Segmenter):
         self.model.eval()
 
     def adaptTo(self,dataset):
-        if self.dataset != dataset:
-            newModel = SegModSegmenter(self.initiator,None,num_classes=len(dataset.classesList()), **self.kwarg )
-            newModel.weights = self.weights
-            try:
-                newModel.load_state_dict(self.state_dict(),strict=False)
-            except:
-                pass
-            newModel.dataset = dataset
-            return newModel
-        else:
-            return self
-    def _forward(self, rgb:torch.Tensor,lidar:torch.Tensor,thermal:torch.Tensor, target=None, dataset=None)->Union[Segmentation,List[Segmentation], torch.tensor]:
+        newModel = SegModSegmenter(self.initiator,None,num_classes=len(dataset.classesList()),dataset=dataset, **self.kwarg )
+        newModel.weights = self.weights
+        try:
+            newModel.load_state_dict(self.state_dict(),strict=False)
+        except:
+            pass
+        newModel.dataset = dataset
+        return newModel
+    def _forward(self, rgb:torch.Tensor,lidar:torch.Tensor,thermal:torch.Tensor, target=None)->Union[Segmentation,List[Segmentation], torch.tensor]:
         if isinstance(rgb,list):
             return self._forward(torch.cat([v.unsqueeze(0) for v in rgb],0), None,None, target)
         is_list = True
@@ -255,8 +254,7 @@ class SegModSegmenter(Segmenter):
                 target = [target.toTorchVisionSegmentationTarget(num_class,Size.fromTensor(rgb)).to(self.device)]
 
             torchvisionresult= self.model.to(self.device).forward(rgb.to(self.device))
-            target = torch.cat([t.unsqueeze(0) for t in target],-1)
-            
+            target = torch.cat([t.unsqueeze(0) for t in target],0)
             loss1 = nn.CrossEntropyLoss()
             loss2 = nn.MSELoss()
             def loss(a,b):
@@ -373,7 +371,7 @@ class SegModSegmenterInitiator():
             return smp.FPN(self.encoder_name,
                             encoder_weights=self.encoder_weights if not test_run else None, 
                             in_channels=3,
-                            classes= num_classes
+                            classes= num_classes, encoder_depth=5
                             )
         
         return None

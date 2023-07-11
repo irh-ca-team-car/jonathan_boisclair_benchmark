@@ -288,31 +288,31 @@ class Segmentation:
         labels = CVAdapter.toOpenCV1Channel(img)
         seg._img=labels
         seg._size = Size.fromTensor(seg._img)
-        
-        for clz in range(len(classesName)):
-            if clz==0: continue
-            class_blobs = (labels.astype(np.uint32) == clz).astype(np.uint8)
-            contours, hierarchy =cv2.findContours(class_blobs,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
-            for contour in contours:
-                nPts = contour.shape[0]
+        if classesName is not None:
+            for clz in range(len(classesName)):
+                if clz==0: continue
+                class_blobs = (labels.astype(np.uint32) == clz).astype(np.uint8)
+                contours, hierarchy =cv2.findContours(class_blobs,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
+                for contour in contours:
+                    nPts = contour.shape[0]
 
-                box = Shape2d()
-                box.c = clz
-                box.cn = classesName[box.c]
-                box.shape.extend([Point2d(contour[f,0,0],contour[f,0,1]) for f in range(nPts)])
-                box.shape.append(box.shape[0])
-                if confidences_img is not None:
-                    box.cf =torch.mean(
-                        torch.tensor(
-                        [
-                            confidences_img[clz,contour[f,0,0],contour[f,0,1]]
-                            for f in range(nPts)
-                            if contour[f,0,0] < confidences_img.shape[1] and
-                            contour[f,0,1] < confidences_img.shape[2]
-                        ]
-                        )).item()
-                    
-                seg._shapes.append(box)
+                    box = Shape2d()
+                    box.c = clz
+                    box.cn = classesName[box.c]
+                    box.shape.extend([Point2d(contour[f,0,0],contour[f,0,1]) for f in range(nPts)])
+                    box.shape.append(box.shape[0])
+                    if confidences_img is not None:
+                        box.cf =torch.mean(
+                            torch.tensor(
+                            [
+                                confidences_img[clz,contour[f,0,0],contour[f,0,1]]
+                                for f in range(nPts)
+                                if contour[f,0,0] < confidences_img.shape[1] and
+                                contour[f,0,1] < confidences_img.shape[2]
+                            ]
+                            )).item()
+                        
+                    seg._shapes.append(box)
         return seg
     @property
     def detection(self) -> "Detection":
@@ -350,9 +350,9 @@ class Segmentation:
         gt = self.groundTruth
         if colors is None: 
             colors = [(0,0,0),(255,0,0),(0,255,0),(0,0,255),(128,0,0),(0,128,0),(0,0,128),(128,255,0),(255,128,0),(255,0,128),(128,0,255),(0,128,255),(0,255,128),(128,255,255),(255,128,255),(255,255,128)]
-            in_max = self._img.max()
+            in_max = int(self._img.max()) +1
             while in_max > len(colors):
-                colors.append((random.randint(0,255),random.randint(0,255),random.randint(0,255)))
+                colors.append((random.randint(128,200),random.randint(128,200),random.randint(128,200)))
         _img = torch.from_numpy(self._img).float().unsqueeze(0).unsqueeze(0)
         _img=torch.nn.functional.interpolate(_img, (size.h,size.w)).squeeze(0).squeeze(0).numpy()
         for i,c in enumerate(colors):
@@ -391,6 +391,8 @@ class Segmentation:
         return Segmentation.color(self.groundTruth,colors)
     def toTorchVisionTarget(self,num_class, size:Size) -> torch.Tensor:
         gt = self.groundTruth.unsqueeze(0)
+        if(len(gt.shape)==3):
+            gt = gt.unsqueeze(0)
         gt = torch.nn.functional.interpolate(gt, size=(size.h, size.w)).squeeze(0)
         gt_ori = gt
         #print("gt_ori",gt_ori.min(),gt_ori.max())

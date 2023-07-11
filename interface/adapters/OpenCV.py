@@ -21,7 +21,7 @@ class CVAdapter:
             t=t[0]
         t = t.cpu()
         np_ = t.detach().numpy()
-        return np_
+        return np_.astype(np.float32)
     def to(self,device:torch.device):
         self.device = device
         return self

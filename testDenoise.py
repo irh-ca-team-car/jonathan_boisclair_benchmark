@@ -65,7 +65,6 @@ for name,model_ctr in [(m_name, model_1)]:
             optim.step()
 
             optim.zero_grad()
-
            
             iter+= len(cocoSamp)
             #scheduler.step()

@@ -39,12 +39,13 @@ class VoC2007Detection:
     def lazy(self):
         if not hasattr(self,"images"):
             self.images = foz.load_zoo_dataset("voc-2007", split=self.split, **self.kwargs)
-
+            self.data = list(self.images)
+        return self
     def __init__(self, split: Union[Literal["train"],Literal["test"], None]=None,dataset_dir=None, **kwargs) -> None:
         kwargs["dataset_dir"]=dataset_dir
         self.split = split
         self.kwargs = kwargs
-        #self.images = foz.load_zoo_dataset("voc-2007", split=split, **kwargs)
+        
         self.dataset_dir=dataset_dir
         # The directory containing the dataset to import
         self.dataset_dir =dataset_dir
@@ -69,11 +70,7 @@ class VoC2007Detection:
                 "ground_truth.detections.label"
             )]
         return list(self.A1Classes)
-    def lazy(self):
-        if self.data is None:
-            self.lazy()
-            self.data = list(self.images)
-        return self
+    
     def getId(self,str: str):
         import sys
         if self.A1Classes is None:

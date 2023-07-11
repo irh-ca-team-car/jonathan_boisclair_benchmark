@@ -269,7 +269,11 @@ class mIOUAccumulator:
         gt1 = pred.groundTruth
         gt2 = gt.groundTruth
 
-
+        while(gt1.shape[0]==1):
+            gt1 = gt1.squeeze(0)
+        while(gt2.shape[0]==1):
+            gt2 = gt2.squeeze(0)
+            
         if (gt1.shape != gt2.shape):
             if gt1.view(-1).shape[0] < gt2.view(-1).shape[0]:
                 gt2 = torch.nn.functional.interpolate(gt2.unsqueeze(0), gt1.shape[1:]).squeeze(0)
