@@ -96,6 +96,7 @@ mscoco = ['__background__',
  'teddy bear',
  'hair drier',
  'toothbrush']
+ 
 class CocoDetection(DetectionDataset):
     def classesList(self):
         return list(mscoco)

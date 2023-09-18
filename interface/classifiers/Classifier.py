@@ -82,7 +82,7 @@ class Classifier(nn.Module):
 
 class TorchVisionClassifier(Classifier):
     model:torch.nn.Module
-    def __init__(self, initiator, num_classes=None, **kwargs):
+    def __init__(self, initiator,weights=None, num_classes=None, **kwargs):
         super(TorchVisionClassifier,self).__init__(3,True)
         self.initiator = initiator
         self.kwargs=kwargs
@@ -91,11 +91,12 @@ class TorchVisionClassifier(Classifier):
         else:
             self.model = initiator(**kwargs)
         self.model.eval()
+        self.weights=weights
         self.dataset = ClassificationDataset.named("IMAGENET1K_V1")
     def adaptTo(self,dataset) -> "TorchVisionClassifier":
         if self.dataset != dataset:
             print("Torchvision model adapting to ",dataset.getName())
-            newModel = TorchVisionClassifier(self.initiator,self.w, num_classes=len(dataset.classesList()), **self.kwargs) 
+            newModel = TorchVisionClassifier(self.initiator, num_classes=len(dataset.classesList()), **self.kwargs) 
             try:
                 newModel.load_state_dict(self.state_dict(),strict=False)
             except:
@@ -134,7 +135,7 @@ class TorchVisionClassifierInitiator():
         self.kwargs = kwargs
         pass
     def __call__(self):
-        return TorchVisionClassifier(self.initiator,None, **self.kwargs)
+        return TorchVisionClassifier(self.initiator, **self.kwargs)
 
 def registerNormal():
     TorchVisionClassifier.register("alexnet", TorchVisionClassifierInitiator(torchvision.models.alexnet, weights=torchvision.models.AlexNet_Weights.IMAGENET1K_V1))
@@ -158,11 +159,7 @@ def registerNormal():
 
     TorchVisionClassifier.register("googlenet", TorchVisionClassifierInitiator(torchvision.models.googlenet, weights=torchvision.models.GoogLeNet_Weights.IMAGENET1K_V1, init_weights=False))
     TorchVisionClassifier.register("inception_v3", TorchVisionClassifierInitiator(torchvision.models.inception_v3, weights=torchvision.models.Inception_V3_Weights.IMAGENET1K_V1, init_weights=False))
-    TorchVisionClassifier.register("vit_l_32", TorchVisionClassifierInitiator(torchvision.models.vit_l_32, weights=torchvision.models.ViT_L_32_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("vit_b_16", TorchVisionClassifierInitiator(torchvision.models.vit_b_16, weights=torchvision.models.ViT_B_16_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("vit_b_32", TorchVisionClassifierInitiator(torchvision.models.vit_b_32, weights=torchvision.models.ViT_B_32_Weights.IMAGENET1K_V1))
-    TorchVisionClassifier.register("vit_l_16", TorchVisionClassifierInitiator(torchvision.models.vit_l_16, weights=torchvision.models.ViT_L_16_Weights.IMAGENET1K_V1))
-
+  
     TorchVisionClassifier.register("vgg11", TorchVisionClassifierInitiator(torchvision.models.vgg11, weights=torchvision.models.VGG11_Weights.IMAGENET1K_V1))
     TorchVisionClassifier.register("vgg13", TorchVisionClassifierInitiator(torchvision.models.vgg13, weights=torchvision.models.VGG13_Weights.IMAGENET1K_V1))
     TorchVisionClassifier.register("vgg16", TorchVisionClassifierInitiator(torchvision.models.vgg16, weights=torchvision.models.VGG16_Weights.IMAGENET1K_V1))
@@ -183,6 +180,12 @@ def registerNormal():
     TorchVisionClassifier.register("resnet50", TorchVisionClassifierInitiator(torchvision.models.resnet50, weights=torchvision.models.ResNet50_Weights.IMAGENET1K_V1))
     TorchVisionClassifier.register("resnet101", TorchVisionClassifierInitiator(torchvision.models.resnet101, weights=torchvision.models.ResNet101_Weights.IMAGENET1K_V1))
     TorchVisionClassifier.register("resnet152", TorchVisionClassifierInitiator(torchvision.models.resnet152, weights=torchvision.models.ResNet152_Weights.IMAGENET1K_V1))
+
+    TorchVisionClassifier.register("vit_h_14", TorchVisionClassifierInitiator(torchvision.models.vit_h_14, weights=torchvision.models.ViT_H_14_Weights.IMAGENET1K_SWAG_E2E_V1))
+    TorchVisionClassifier.register("vit_l_32", TorchVisionClassifierInitiator(torchvision.models.vit_l_32, weights=torchvision.models.ViT_L_32_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("vit_b_32", TorchVisionClassifierInitiator(torchvision.models.vit_b_32, weights=torchvision.models.ViT_B_32_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("vit_l_16", TorchVisionClassifierInitiator(torchvision.models.vit_l_16, weights=torchvision.models.ViT_L_16_Weights.IMAGENET1K_V1))
+    TorchVisionClassifier.register("vit_b_16", TorchVisionClassifierInitiator(torchvision.models.vit_b_16, weights=torchvision.models.ViT_B_16_Weights.IMAGENET1K_V1))
 
 def registerOld():
     TorchVisionClassifier.register("alexnet", TorchVisionClassifierInitiator(torchvision.models.alexnet, pretrained=True))

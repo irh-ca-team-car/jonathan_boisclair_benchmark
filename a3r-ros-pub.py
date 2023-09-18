@@ -89,10 +89,10 @@ class ImagePublisher(Node):
         if frame is not None and frame.size >0:
             try:
                 width,height = self.exchange.get_video_dimensions()
-                left = frame[:,0:int(width/2)]
-                right = frame[:,int(width/2):width]
-                frame = cv2.scaleAdd(left,0.5,right)
-                frame = cv2.resize(left, (480, 352))
+                #left = frame[:,0:int(width/2)]
+                #right = frame[:,int(width/2):width]
+                #frame = cv2.scaleAdd(left,0.5,right)
+                #frame = cv2.resize(left, (480, 352))
                 self.image_pub.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8"))
                 self.image_pub_com.publish(self.bridge.cv2_to_compressed_imgmsg(frame, "jpeg"))
             except:

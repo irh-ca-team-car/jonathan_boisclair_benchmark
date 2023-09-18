@@ -93,9 +93,9 @@ class PST900Detection(DetectionDataset):
         if isinstance(index,slice):
             values=[]
             if index.step is not None:
-                values = [v for v in range(index.start,index.stop,index.step)]
+                values = [v for v in range(int(index.start),int(index.stop),int(index.step))]
             else:
-                values = [v for v in range(index.start,index.stop)]
+                values = [v for v in range(int(index.start),int(index.stop))]
             return [self.__getitem__(v) for v in values]
         group = self.images[index]
 

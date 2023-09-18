@@ -17,3 +17,6 @@ package*.json
 *.csv
 *.state
 runs
+*.7z
+*.chk
+*weights/*
