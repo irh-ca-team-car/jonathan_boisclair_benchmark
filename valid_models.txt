@@ -1,0 +1,14 @@
+✓ unet+resnet18 : 0.8381643295288086 s
+✓ unet+resnet34 : 0.9598073959350586 s
+✓ unet+timm-resnest14d : 0.995901346206665 s
+✓ unet+timm-regnetx_002 : 0.843503475189209 s
+✓ unet+timm-regnetx_006 : 0.9302775859832764 s
+✓ unet+timm-regnetx_008 : 0.8884022235870361 s
+✓ unet+timm-gernet_s : 0.8694286346435547 s
+✓ unet+timm-mobilenetv3_small_075 : 0.9754817485809326 s
+✓ unet+timm-mobilenetv3_small_100 : 0.9513058662414551 s
+✓ unet+timm-mobilenetv3_small_minimal_100 : 0.7784585952758789 s
+✓ unet+mit_b0 : 0.8905549049377441 s
+✓ unet+tu-tinynet_d : 0.8943140506744385 s
+✓ unet+tu-tinynet_e : 0.8466322422027588 s
+✓ unet+++timm-mobilenetv3_small_minimal_100 : 0.9422714710235596 s

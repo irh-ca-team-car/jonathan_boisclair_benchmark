@@ -62,8 +62,7 @@ class VoC2007Detection:
     def classesList(self):
         if self.A1Classes is None:
             #self.A1Classes =["void", *self.images.get_classes("ground_truth")]
-            self.lazy()
-            self.A1Classes = ["void",*self.images.distinct(
+            self.A1Classes = ["void",*foz.load_zoo_dataset("voc-2007", split=self.split, **self.kwargs).distinct(
                 "ground_truth.detections.label"
             )]
         return list(self.A1Classes)
