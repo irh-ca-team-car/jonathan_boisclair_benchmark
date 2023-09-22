@@ -95,6 +95,7 @@ class TorchVisionSegmenter(Segmenter):
         self.weights = weights
         self.initiator = initiator
         self.kwarg = kwarg
+        self._do_shapes = True
         if num_classes is not None:
             if weights is not None:
                 self.model:torch.nn.Module = initiator(num_classes=num_classes, weights=weights, **self.kwarg)
@@ -103,7 +104,12 @@ class TorchVisionSegmenter(Segmenter):
         else:
             self.model = initiator(weights=weights,**self.kwarg)
         self.model.eval()
-
+    @property
+    def doShape(self):
+        return self._do_shapes
+    @doShape.setter
+    def doShape(self,value):
+        self._do_shapes = value
     def adaptTo(self,dataset):
         if self.dataset != dataset:
             newModel = TorchVisionSegmenter(self.initiator,None,num_classes=len(dataset.classesList()), **self.kwarg )
@@ -147,7 +153,7 @@ class TorchVisionSegmenter(Segmenter):
 
         result=[]
         for i in range(normalized_masks_2.shape[0]):# self.weights.meta["categories"]
-            result.append(Segmentation.FromImage(normalized_masks_2[i], self.dataset.classesList(), normalized_masks[i]))
+            result.append(Segmentation.FromImage(normalized_masks_2[i], self.dataset.classesList()if self.doShape else None, normalized_masks[i]))
         if not is_list:
             return result[0]
         
@@ -268,7 +274,7 @@ class SegModSegmenter(Segmenter):
 
         result=[]
         for i in range(normalized_masks_2.shape[0]):# self.weights.meta["categories"]
-            result.append(Segmentation.FromImage(normalized_masks_2[i], self.dataset.classesList(), normalized_masks[i]))
+            result.append(Segmentation.FromImage(normalized_masks_2[i], self.dataset.classesList() if self.doShape else None, normalized_masks[i]))
         if not is_list:
             return result[0]
         
