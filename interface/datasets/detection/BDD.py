@@ -88,12 +88,14 @@ class BDDDetection(DetectionDataset):
 
         if root is None:
             root = "/mnt/sd/datasets/bdd"
-        for (dirpath, dirnames, filenames) in os.walk(root):
-            for filename in filenames:
-                if filename.endswith('.png') or filename.endswith('.jpg'):
-                    if "/"+split in dirpath:
-                        imagesFiles.append((dirpath, filename))
-
+        try:
+            for (dirpath, dirnames, filenames) in os.walk(root):
+                for filename in filenames:
+                    if filename.endswith('.png') or filename.endswith('.jpg'):
+                        if "/"+split in dirpath:
+                            imagesFiles.append((dirpath, filename))
+        except:
+            pass
         for dirpath, filename in imagesFiles:
             id = os.path.splitext(filename)[0][0:17]
             if id in images:
