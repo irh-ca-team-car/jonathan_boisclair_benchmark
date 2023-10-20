@@ -274,7 +274,7 @@ class SegModSegmenter(Segmenter):
 
         result=[]
         for i in range(normalized_masks_2.shape[0]):# self.weights.meta["categories"]
-            result.append(Segmentation.FromImage(normalized_masks_2[i], self.dataset.classesList() if self.doShape else None, normalized_masks[i]))
+            result.append(Segmentation.FromImage(normalized_masks_2[i], self.dataset.classesList() if (not hasattr(self,"doShape") or self.doShape) else None, normalized_masks[i]))
         if not is_list:
             return result[0]
         
