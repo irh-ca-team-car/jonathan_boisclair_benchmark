@@ -5,9 +5,10 @@ from ..Sample import Classification, Sample
 import torch
 class ClassificationDataset:
     def __init__(self) -> None:
+        self.clz = []
         pass
     def classesList(self) -> List[str]:
-        return []
+        return list(self.clz)
     def getId(self,str: str):
         return 0
     def getName(self,id=None):
