@@ -20,13 +20,16 @@ except:
     pass
 
 import subprocess
+suffixes = ["","_snow","_water"]
 
-repeat = True
-while repeat:
-    vsim = subprocess.run(['python3','testSegmentor6Worker.py'])
+for suffix in tqdm(suffixes,desc="models",leave=False):
 
-    rt = vsim.returncode 
-    repeat = rt==5
-    print(rt)
+    repeat = True
+    while repeat:
+        vsim = subprocess.run(['python3','testSegmentor6Worker.py', suffix])
+
+        rt = vsim.returncode 
+        repeat = rt==5
+        print(rt)
 
         

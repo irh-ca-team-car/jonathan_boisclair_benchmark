@@ -42,7 +42,8 @@ class CocoFODetection:
     def lazy(self):
         if not hasattr(self, "images"):
             self.images = foz.load_zoo_dataset(
-                "sama-coco", split=self.split, label_types=self.type, **self.kwargs)
+                "sama-coco", split=self.split, label_types=self.type,
+                 drop_existing_dataset = True, **self.kwargs)
             self.data = list(self.images)
         return self
 

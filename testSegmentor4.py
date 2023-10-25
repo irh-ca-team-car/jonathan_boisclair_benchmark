@@ -20,6 +20,8 @@ except:
     pass
 
 models= ["unet+mit_b1","unet+mit_b3","unet+mit_b5","fpn+mit_b1","fpn+mit_b3","fpn+mit_b5"]
+suffixes = ["_water","","_snow"]
+
 @dataclass
 class settings():
     processed:Dict = field(default_factory=dict)
@@ -35,19 +37,20 @@ import subprocess
 
 while True:
     random.shuffle(models)
-    for name in tqdm(models,desc="models",leave=False):
-        if name in state.processed and state.processed[name] >= state.current_epoch:
-            continue
-        if name not in state.processed:
-            state.processed[name]=0
-        repeat = True
-        while repeat:
-            vsim = subprocess.run(['python3','testSegmentor4Worker.py',name])
+    for suffix in tqdm(suffixes,desc="mode",leave=True):
+        for name in tqdm(models,desc="models",leave=True):
+            if name in state.processed and state.processed[name] >= state.current_epoch:
+                continue
+            if name not in state.processed:
+                state.processed[name]=0
+            repeat = True
+            while repeat:
+                vsim = subprocess.run(['python3','testSegmentor4Worker.py',name, suffix])
 
-            rt = vsim.returncode 
-            repeat = rt==5
+                rt = vsim.returncode 
+                repeat = rt==5
 
-            print(rt)
+                print(rt)
 
     state.current_epoch += 5
     torch.save(state, "a3_weights/state_v.chk")

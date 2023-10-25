@@ -1,6 +1,7 @@
 import sys
 from dataclasses import dataclass, field
 from typing import Dict
+from interface.ITI.impl.CAEbase.weatheradder.OverlayAdder import OverlayAdder
 from interface.segmentation.Segmenter import Segmenter
 from interface.datasets.Sample import Sample
 import torch
@@ -21,12 +22,14 @@ dataset = CocoFODetection(split="train", max_samples=20000, type_=["segmentation
                           "car", "truck", "traffic light", "stop sign", "bus", "person", "bicycle", "motorcycle"])
 dataset.lazy()
 
+suffix = ""
+
 df = None
 def append_to_csv(C_name, image_id, value, save=True):
     global df
     if df is None:
         try:
-            df = pd.read_csv("A3.csv")
+            df = pd.read_csv("A3"+suffix+".csv")
         except:
             df = pd.DataFrame([], columns=['Image'])
     if not C_name in df.columns:
@@ -40,14 +43,15 @@ def append_to_csv(C_name, image_id, value, save=True):
 
     if save:
         df = df.sort_values(by="Image")
-        df.to_csv("A3.csv", index=False)
+        df.to_csv("A3"+suffix+".csv", index=False)
 
 
 if(len(dataset) == 0):
     print("reload")
     exit(5)
 device = "cuda:0"
-
+water = OverlayAdder("interface/ITI/impl/CAEbase/weatheradder/drop").to(device)
+snow = OverlayAdder("interface/ITI/impl/CAEbase/weatheradder/snow").to(device)
 
 # m_name="unet+tu-tinynet_a"
 try:
@@ -74,7 +78,12 @@ except:
     print("Error,Invalid argument ", __file__, "SEGMENTER")
     exit(2)
 
-for name in tqdm([model_name], desc="models", leave=False):
+try:
+    suffix = sys.argv[2]
+except:
+    suffix = ""
+
+for name in tqdm([model_name], desc=model_name+""+suffix, leave=False):
     model_ctr = Segmenter.named(name).to(device)
     # Segmenter.named("deeplabv3_resnet50")
     model = model_ctr.adaptTo(dataset).to(device)
@@ -94,7 +103,16 @@ for name in tqdm([model_name], desc="models", leave=False):
 
     for cocoSamp in t:
         cocoSamp = scale(cocoSamp)
-      
+
+        for samp in cocoSamp:
+            samp = samp.to(device)
+            if suffix == "_water":
+                water.add(samp.getRGB(),200,0.2)
+            if suffix == "_snow":
+                snow.add(samp.getRGB(),200,0.2)
+                snow.add(samp.getRGB(),75,0.5)
+                snow.add(samp.getRGB(),10,1)
+
         prediction = [f.filter(0.8) for f in model.forward(cocoSamp)]
         mIou = mIOU([x.segmentation for x in cocoSamp], prediction)
 
@@ -102,11 +120,11 @@ for name in tqdm([model_name], desc="models", leave=False):
         iter += len(cocoSamp)
         if iter % 100 ==0:
             df = df.sort_values(by="Image")
-            df.to_csv("A3.csv", index=False)
+            df.to_csv("A3"+suffix+".csv", index=False)
         if need_exit:
             break
     df = df.sort_values(by="Image")
-    df.to_csv("A3.csv", index=False)
+    df.to_csv("A3"+suffix+".csv", index=False)
 
     if need_exit:
         exit(0)
