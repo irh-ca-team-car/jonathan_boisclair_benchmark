@@ -49,6 +49,7 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 class PredictionPub(Node):
     model : Detector
+    #General method to gather params --ros-args values
     def param(self, name, default_value=None):
         node: rclpy.node.Node = self
         print(name, default_value)
