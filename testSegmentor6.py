@@ -20,7 +20,7 @@ except:
     pass
 
 import subprocess
-suffixes = ["","_snow","_water"]
+suffixes = [""]
 
 for suffix in tqdm(suffixes,desc="models",leave=False):
 

@@ -63,7 +63,7 @@ class MultiImageAveragePrecision:
                 dr = recall[x].item()-previous_recall
                 previous_recall =recall[x]
                 v += dr * precision[x]
-            
+            v = torch.mean(precision.view(-1)).item()
             ret[key] = v
         return ret
     def coco(self):
@@ -111,7 +111,7 @@ class DatasetAveragePrecision:
                 t = tqdm(t)
             for sample in t:
                 self.gt.append(sample.detection)
-                self.det.append(self.model(sample))
+                self.det.append(self.model.forward(sample))
             self.map = MultiImageAveragePrecision(self.gt,self.det,self.verbose)
             self.map.filter = self.filter
         return self.map.calc(iou)

@@ -24,11 +24,13 @@ dataset.lazy()
 model_name = "vit_b_16"
 model_name = "alexnet"
 df = None
+P = "_water"
+
 def append_to_csv(C_name, image_id, value, save=True):
     global df
     if df is None:
         try:
-            df = pd.read_csv("A3_V"+model_name+".csv")
+            df = pd.read_csv("A3_V"+P+model_name+".csv")
         except:
             df = pd.DataFrame([], columns=['Image'])
     if not C_name in df.columns:
@@ -42,7 +44,7 @@ def append_to_csv(C_name, image_id, value, save=True):
 
     if save:
         df = df.sort_values(by="Image")
-        df.to_csv("A3_V"+model_name+".csv", index=False)
+        df.to_csv("A3_V"+P+model_name+".csv", index=False)
 
 if(len(dataset)==0):
     print("reload")
@@ -51,7 +53,7 @@ device = "cuda:0"
 
 
 c = ClassificationDataset()
-df2 = pd.read_csv("A3.csv")
+df2 = pd.read_csv("A3"+P+".csv")
 t_dataset = torch.tensor(df2.values)
 t_dataset = t_dataset[:,1:]
 c.clz = list(range(t_dataset.shape[1]))

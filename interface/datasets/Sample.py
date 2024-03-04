@@ -835,6 +835,22 @@ class Box2d:
 
     def __repr__(self) -> str:
         return self.__str__()
+    
+    def EvaluateDistance(self, s:Sample, obj_height=1.5) -> float:
+        f = self
+        angleV = (f.h)*70.0 / s.size().h
+        circ = 360 * obj_height / angleV
+        r = circ / (2*3.14)
+        distance = -r
+        y = -float(distance)
+
+        x = (f.x + f.w/2)
+        half_width = s.size().w/2.0
+        val = (x - half_width)/s.size().w
+        angle = (150/2.0)*val
+        x = -float(math.tan(angle*0.01745329) * distance)
+        d = math.dist((x,y),(0,0))
+        return d
 class Point2d:
     x: float
     y: float
@@ -1029,6 +1045,14 @@ class Detection:
         d.boxes2d = [x for x in self.boxes2d if int(x.c) == int(c)]
         d.boxes3d = [x for x in self.boxes3d if int(x.c) == int(c)]
         return d
+    def BoxIOU(self,det:"Detection")-> torch.Tensor:
+        d1 = self.toX1Y1X2Y2C()[:,0:4]
+        d2 = det.toX1Y1X2Y2C()[:,0:4]
+        return torchvision.ops.box_iou(d1,d2)
+    def Box2dMask(self, mask)-> List[Box2d]:
+        return [b for b,m in zip(self.boxes2d, mask) if m]
+    def Box2dIndices(self, indices)-> List[Box2d]:
+        return [b for i,b in enumerate(self.boxes2d) if i in indices]
     @torch.no_grad()
     def onImage(self, sample:Union[Sample,torch.Tensor], colors:List[Tuple[int,int,int]]=None, width=4)->torch.Tensor:
         if isinstance(sample,Sample):

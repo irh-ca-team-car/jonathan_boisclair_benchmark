@@ -1,18 +1,3 @@
-Seems like weights are not implemented, are you using a old pytorch version?
-Seems like weights are not implemented, Segmentation doesn't support old pytorch versions? Traceback (most recent call last):
-  File "finder.py", line 2, in <module>
-    from interface.segmentation.Segmenter import Segmenter
-  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
-  File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
-  File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
-  File "<frozen importlib._bootstrap_external>", line 848, in exec_module
-  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
-  File "/mnt/sd/git/a3r/interface/segmentation/Segmenter.py", line 181, in <module>
-    Segmenter.registerIf("fcn_resnet101",TorchVisionSegmenterInitiator(torchvision.models.segmentation.fcn_resnet101, weights=torchvision.models.segmentation.FCN_ResNet101_Weights.COCO_WITH_VOC_LABELS_V1))
-AttributeError: module 'torchvision.models.segmentation' has no attribute 'FCN_ResNet101_Weights'
-Split 'train' already downloaded
-Split 'validation' already downloaded
-Loading existing dataset 'voc-2007'. To reload from disk, either delete the existing dataset or provide a custom `dataset_name` to use
 ✓ unet+resnet18 : 0.8381643295288086 s
 ✓ unet+resnet34 : 0.9598073959350586 s
 X unet+resnet50 : 1.1273181438446045 s
@@ -186,4 +171,3 @@ X unet+++vgg13 : 4.196906566619873 s
 X unet+++vgg13_bn : 4.475393772125244 s
 X unet+++vgg16 : 4.526015758514404 s
 X unet+++vgg16_bn : 4.815189361572266 s
-X 

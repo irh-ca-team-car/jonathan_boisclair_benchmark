@@ -8,7 +8,7 @@ import torch
 import time
 import cv2
 import torchvision
-
+print(__file__)
 def show(t: torch.Tensor,wait: bool = False):
     if len(t.shape) ==3:
         t=t.unsqueeze(0)
@@ -18,17 +18,20 @@ def show(t: torch.Tensor,wait: bool = False):
     t = t.cpu().permute(1, 2, 0)
     np_ = t.detach().numpy()
     np_ = cv2.cvtColor(np_, cv2.COLOR_BGR2RGB)
-    cv2.imshow("Image", np_)
+    #cv2.imshow("Image", np_)
     # for i in range(30):
 
-    while True:
+    while wait:
             cv2.imshow("Image", np_)
             k = cv2.waitKey(1)
             if k == 27:  # Esc key to stop
                 return False
             if k == 115:
                 return True
+    return False
+print(__file__)
 dataset = A2Detection("data/FLIR_CONVERTED/all.csv")
+print(__file__)
 from tqdm import tqdm
 import random
 from interface.transforms.Scale import scale
@@ -45,10 +48,12 @@ def fnThermal(sample: Sample):
     sample.setThermal(thermal)
     return sample
 
+print(__file__)
 
 br = AutoContrast()
 for cocoSamp in tqdm(dataset):
     cocoSamp:Sample = cocoSamp
+    print("A")
     scaled = FLIR_FIX(fnThermal(br(cocoSamp)))
 
     tmp = (scaled.clone().getThermal()*255).byte()
@@ -59,6 +64,7 @@ for cocoSamp in tqdm(dataset):
 
     a = ((imgt.int()+imgv.int()) /2).byte()
     img = torch.cat([imgt,imgv,a],2)
+    print("A")
 
     mean = img[0].float().mean()
     if show(img):
@@ -75,6 +81,8 @@ for cocoSamp in tqdm(dataset):
        
         break
     pass
+    print("-")
+
 
 exit(0)
 
