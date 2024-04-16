@@ -3,7 +3,6 @@ from .. import Sample, LidarSample
 from ...detectors.Detection import Detection, Box2d, Box3d
 import fiftyone as fo
 import fiftyone.zoo as foz
-
 class VoC2007Detection:
     A1Classes = None
     images: fo.Dataset
