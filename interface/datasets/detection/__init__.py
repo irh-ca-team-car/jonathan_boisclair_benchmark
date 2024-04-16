@@ -7,4 +7,4 @@ from .Coco import CocoDetection
 from .A2W import A2W
 
 DetectionDataset.register("coco-empty",CocoDetection())
-#DetectionDataset.register("voc-2007",VoC2007Detection())
+DetectionDataset.register("voc-2007",VoC2007Detection())
